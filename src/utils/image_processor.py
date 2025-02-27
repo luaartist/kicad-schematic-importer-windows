@@ -6,7 +6,6 @@ import shutil
 from pathlib import Path
 from typing import Optional, Tuple, List
 
-# Try to import potrace, but don't fail if it's not available
 try:
     import potrace
     HAS_POTRACE = True
@@ -17,33 +16,63 @@ class ImageProcessor:
     """Utility class for image processing and conversion"""
     
     def __init__(self):
-        self.ALLOWED_TOOLS = frozenset({'inkscape', 'potrace'})  # Use frozenset for immutable set
-        self.has_inkscape = self.check_tool_exists('inkscape')
-        self.has_potrace = self.check_tool_exists('potrace')
-    
-    def check_tool_exists(self, tool_name: str) -> bool:
-        """Check if external tool is available in system PATH."""
+        self.ALLOWED_TOOLS = frozenset({'inkscape', 'potrace'})
+        self._validate_tools()
+        
+    def _validate_tools(self) -> None:
+        """Safely validate and initialize available tools."""
+        self.has_inkscape = self._check_tool_exists('inkscape')
+        self.has_potrace = self._check_tool_exists('potrace')
+        
+    def _check_tool_exists(self, tool_name: str) -> bool:
+        """Safely check if external tool is available."""
         if tool_name not in self.ALLOWED_TOOLS:
             return False
         return shutil.which(tool_name) is not None
 
-    def convert_to_svg(self, image_path: str, output_path: str) -> str:
-        """Convert image to SVG format using Inkscape.
+    def _validate_path(self, path: str) -> Path:
+        """Validate and resolve path safely."""
+        try:
+            resolved_path = Path(path).resolve()
+            if not resolved_path.is_relative_to(Path.cwd()):
+                raise ValueError("Path must be within current working directory")
+            return resolved_path
+        except Exception as e:
+            raise ValueError(f"Invalid path: {e}")
+
+    def _run_subprocess(self, cmd: List[str], timeout: int = 30) -> subprocess.CompletedProcess:
+        """
+        Safely run a subprocess command.
         
         Args:
-            image_path: Path to source image
-            output_path: Desired output SVG path
+            cmd: List of command arguments
+            timeout: Maximum execution time in seconds
             
         Returns:
-            Path to generated SVG file
+            CompletedProcess instance
             
         Raises:
-            ValueError: If paths are invalid
-            TimeoutError: If conversion times out
-            subprocess.CalledProcessError: If conversion fails
+            subprocess.SubprocessError: If the command fails
         """
-        image_path = Path(image_path).resolve()
-        output_path = Path(output_path).resolve()
+        if not all(isinstance(arg, str) for arg in cmd):
+            raise ValueError("All command arguments must be strings")
+            
+        try:
+            return subprocess.run(
+                cmd,
+                check=True,
+                timeout=timeout,
+                capture_output=True,
+                text=True,
+                shell=False  # Explicitly set shell=False for security
+            )
+        except subprocess.SubprocessError as e:
+            raise RuntimeError(f"Command execution failed: {e}")
+
+    def convert_to_svg(self, image_path: str, output_path: str) -> str:
+        """Safely convert image to SVG format."""
+        image_path = self._validate_path(image_path)
+        output_path = self._validate_path(output_path)
         
         if not image_path.exists():
             raise ValueError(f"Input image not found: {image_path}")
@@ -54,18 +83,15 @@ class ImageProcessor:
         if not inkscape_path:
             raise RuntimeError("Inkscape not found in PATH")
             
-        try:
-            result = subprocess.run([
-                inkscape_path,
-                f'--export-filename={output_path}',
-                '--export-type=svg',
-                '--export-plain-svg',
-                str(image_path)
-            ], check=True, capture_output=True, text=True, timeout=30)
-            return str(output_path)
-        except subprocess.TimeoutExpired:
-            raise TimeoutError("SVG conversion timed out after 30 seconds")
-    
+        cmd = [
+            inkscape_path,
+            '--export-filename', str(output_path),
+            str(image_path)
+        ]
+        
+        self._run_subprocess(cmd)
+        return str(output_path)
+
     def get_image_dpi(self, image_path: str) -> Optional[float]:
         """Get image DPI if available.
         
@@ -134,20 +160,26 @@ class ImageProcessor:
         return output_path
     
     def _vectorize_with_potrace(self, image_path: str) -> str:
-        """Use potrace for vectorization."""
-        output_path = str(Path(image_path).with_suffix('.svg'))
-        potrace_path = shutil.which('potrace')
+        """Safely vectorize using potrace."""
+        image_path = self._validate_path(image_path)
+        output_path = image_path.with_suffix('.svg')
         
-        result = subprocess.run([
+        potrace_path = shutil.which('potrace')
+        if not potrace_path:
+            raise RuntimeError("Potrace not found")
+            
+        cmd = [
             potrace_path,
             '--svg',
-            '--output=' + output_path,
-            image_path
-        ], check=True, capture_output=True, text=True)
+            '--output', str(output_path),
+            str(image_path)
+        ]
         
-        if not Path(output_path).exists():
-            raise ValueError(f"Potrace failed to create output file: {result.stderr}")
-        return output_path
+        self._run_subprocess(cmd)
+        
+        if not output_path.exists():
+            raise ValueError(f"Potrace failed to create output file: {output_path}")
+        return str(output_path)
     
     def _vectorize_builtin(self, image_path: str) -> str:
         """Built-in vectorization using OpenCV and potrace library."""

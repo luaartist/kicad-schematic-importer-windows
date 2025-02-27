@@ -13,6 +13,8 @@ import cv2
 import numpy as np
 from svgpathtools import Path as SvgPath, Line, CubicBezier, QuadraticBezier
 import svgwrite
+from typing import List, Optional
+import shlex
 
 class AlternativeImageProcessor:
     """
@@ -23,35 +25,58 @@ class AlternativeImageProcessor:
     def __init__(self):
         """Initialize the image processor."""
         self.ALLOWED_TOOLS = ['inkscape', 'autotrace', 'opencv']
-        
-        # Check which tools are available
-        self.has_inkscape = self.check_tool_exists('inkscape')
-        self.has_autotrace = self.check_tool_exists('autotrace')
-        self.has_opencv = True  # OpenCV is installed via pip
-        
-        print(f"Available vectorization tools: " +
-              f"Inkscape: {self.has_inkscape}, " +
-              f"AutoTrace: {self.has_autotrace}, " +
-              f"OpenCV: {self.has_opencv}")
+        self._validate_tools()
     
-    def check_tool_exists(self, tool_name):
-        """
-        Check if a command-line tool exists.
-        
-        Args:
-            tool_name (str): The name of the tool to check.
-            
-        Returns:
-            bool: True if the tool exists, False otherwise.
-        """
+    def _validate_tools(self) -> None:
+        """Validate and initialize available tools safely."""
+        self.has_inkscape = self._check_tool_exists('inkscape')
+        self.has_autotrace = self._check_tool_exists('autotrace')
+        self.has_opencv = True  # OpenCV is installed via pip
+    
+    def _check_tool_exists(self, tool_name: str) -> bool:
+        """Safely check if a command-line tool exists."""
         if tool_name not in self.ALLOWED_TOOLS:
             return False
-        
+        return shutil.which(tool_name) is not None
+
+    def _validate_path(self, path: str) -> Path:
+        """Validate and resolve path safely."""
         try:
-            # Use shutil.which to check if the tool is in the PATH
-            return shutil.which(tool_name) is not None
-        except Exception:
-            return False
+            resolved_path = Path(path).resolve()
+            if not resolved_path.is_relative_to(Path.cwd()):
+                raise ValueError("Path must be within current working directory")
+            return resolved_path
+        except Exception as e:
+            raise ValueError(f"Invalid path: {e}")
+
+    def _run_subprocess(self, cmd: List[str], timeout: int = 30) -> subprocess.CompletedProcess:
+        """
+        Safely run a subprocess command.
+        
+        Args:
+            cmd: List of command arguments
+            timeout: Maximum execution time in seconds
+            
+        Returns:
+            CompletedProcess instance
+            
+        Raises:
+            subprocess.SubprocessError: If the command fails
+        """
+        if not all(isinstance(arg, str) for arg in cmd):
+            raise ValueError("All command arguments must be strings")
+            
+        try:
+            return subprocess.run(
+                cmd,
+                check=True,
+                timeout=timeout,
+                capture_output=True,
+                text=True,
+                shell=False  # Explicitly set shell=False for security
+            )
+        except subprocess.SubprocessError as e:
+            raise RuntimeError(f"Command execution failed: {e}")
     
     def get_image_dpi(self, image_path):
         """
@@ -75,51 +100,31 @@ class AlternativeImageProcessor:
             print(f"Error getting image DPI: {e}")
             return None
     
-    def convert_to_svg(self, input_path, output_path, timeout=30):
-        """
-        Convert an image to SVG using Inkscape.
+    def convert_to_svg(self, input_path: str, output_path: str, timeout: int = 30) -> str:
+        """Convert image to SVG safely."""
+        # Validate paths
+        input_path = self._validate_path(input_path)
+        output_path = self._validate_path(output_path)
         
-        Args:
-            input_path (str): Path to the input image.
-            output_path (str): Path to save the output SVG.
-            timeout (int, optional): Timeout in seconds. Defaults to 30.
-            
-        Returns:
-            str: Path to the output SVG.
-            
-        Raises:
-            ValueError: If the input image does not exist or the output directory does not exist.
-            RuntimeError: If Inkscape is not found.
-            TimeoutError: If the conversion times out.
-        """
-        # Check if input file exists
-        if not os.path.isfile(input_path):
+        if not input_path.is_file():
             raise ValueError(f"Input image not found: {input_path}")
-        
-        # Check if output directory exists
-        output_dir = os.path.dirname(output_path)
-        if output_dir and not os.path.isdir(output_dir):
+            
+        output_dir = output_path.parent
+        if not output_dir.exists():
             raise ValueError(f"Output directory does not exist: {output_dir}")
-        
-        # Check if Inkscape is available
+            
         inkscape_path = shutil.which('inkscape')
         if not inkscape_path:
-            raise RuntimeError("Inkscape not found. Please install Inkscape.")
-        
-        try:
-            # Run Inkscape to convert the image to SVG
-            cmd = [
-                inkscape_path,
-                '--export-filename=' + output_path,
-                input_path
-            ]
+            raise RuntimeError("Inkscape not found")
             
-            subprocess.run(cmd, check=True, timeout=timeout)
-            return output_path
-        except subprocess.TimeoutExpired:
-            raise TimeoutError(f"SVG conversion timed out after {timeout} seconds")
-        except Exception as e:
-            raise RuntimeError(f"Error converting to SVG: {e}")
+        cmd = [
+            inkscape_path,
+            '--export-filename', str(output_path),
+            str(input_path)
+        ]
+        
+        self._run_subprocess(cmd, timeout)
+        return str(output_path)
     
     def vectorize_image(self, image_path):
         """
@@ -159,83 +164,49 @@ class AlternativeImageProcessor:
         # If all methods fail, raise an error
         raise ValueError(f"All vectorization methods failed: {', '.join(errors)}")
     
-    def _vectorize_with_inkscape(self, image_path):
-        """
-        Vectorize an image using Inkscape.
+    def _vectorize_with_inkscape(self, image_path: str) -> str:
+        """Safely vectorize using Inkscape."""
+        image_path = self._validate_path(image_path)
+        output_path = image_path.with_suffix('.svg')
         
-        Args:
-            image_path (str): Path to the image to vectorize.
-            
-        Returns:
-            str: Path to the vectorized SVG.
-            
-        Raises:
-            ValueError: If Inkscape fails to create the output file.
-        """
-        # Check if Inkscape is available
         inkscape_path = shutil.which('inkscape')
         if not inkscape_path:
-            raise RuntimeError("Inkscape not found. Please install Inkscape.")
-        
-        # Create output path
-        output_path = image_path.replace('.png', '.svg')
-        output_path = output_path.replace('.jpg', '.svg')
-        output_path = output_path.replace('.jpeg', '.svg')
-        
-        # Run Inkscape to vectorize the image
+            raise RuntimeError("Inkscape not found")
+            
         cmd = [
             inkscape_path,
-            '--export-filename=' + output_path,
+            '--export-filename', str(output_path),
             '--export-plain-svg',
-            image_path
+            str(image_path)
         ]
         
-        subprocess.run(cmd, check=True)
+        self._run_subprocess(cmd)
         
-        # Check if the output file was created
-        if not Path(output_path).exists():
+        if not output_path.exists():
             raise ValueError(f"Inkscape failed to create output file: {output_path}")
-        
-        return output_path
+        return str(output_path)
     
-    def _vectorize_with_autotrace(self, image_path):
-        """
-        Vectorize an image using AutoTrace.
+    def _vectorize_with_autotrace(self, image_path: str) -> str:
+        """Safely vectorize using AutoTrace."""
+        image_path = self._validate_path(image_path)
+        output_path = image_path.with_suffix('.svg')
         
-        Args:
-            image_path (str): Path to the image to vectorize.
-            
-        Returns:
-            str: Path to the vectorized SVG.
-            
-        Raises:
-            ValueError: If AutoTrace fails to create the output file.
-        """
-        # Check if AutoTrace is available
         autotrace_path = shutil.which('autotrace')
         if not autotrace_path:
-            raise RuntimeError("AutoTrace not found. Please install AutoTrace.")
-        
-        # Create output path
-        output_path = image_path.replace('.png', '.svg')
-        output_path = output_path.replace('.jpg', '.svg')
-        output_path = output_path.replace('.jpeg', '.svg')
-        
-        # Run AutoTrace to vectorize the image
+            raise RuntimeError("AutoTrace not found")
+            
         cmd = [
             autotrace_path,
-            '--output-file=' + output_path,
-            '--output-format=svg',
-            image_path
+            '--output-file', str(output_path),
+            '--output-format', 'svg',
+            str(image_path)
         ]
         
-        subprocess.run(cmd, check=True)
+        self._run_subprocess(cmd)
         
-        # Check if the output file was created
-        if not Path(output_path).exists():
+        if not output_path.exists():
             raise ValueError(f"AutoTrace failed to create output file: {output_path}")
-        
-        return output_path
+        return str(output_path)
     
     def _vectorize_with_opencv(self, image_path):
         """

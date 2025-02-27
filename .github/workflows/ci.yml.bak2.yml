@@ -36,12 +36,12 @@ jobs:
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
     
     - name: Test with pytest
+      shell: pwsh
       run: |
-        # Create a basic test file if none exist
-        if not exist tests mkdir tests
-        if not exist tests\test_basic.py (
-          echo def test_placeholder(): assert True > tests\test_basic.py
-        )
-        
-        # Run tests with error handling
-        python -m pytest tests/ -v || echo "Some tests failed, but continuing workflow"
+        if (!(Test-Path tests)) {
+          New-Item -ItemType Directory -Path tests
+        }
+        if (!(Test-Path tests/test_basic.py)) {
+          Set-Content -Path tests/test_basic.py -Value 'def test_placeholder(): assert True'
+        }
+        python -m pytest tests/ -v
