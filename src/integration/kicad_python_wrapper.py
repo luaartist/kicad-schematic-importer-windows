@@ -1,6 +1,7 @@
 import os
 import sys
 import platform
+from pathlib import Path
 from typing import Optional, Dict, Any, Union
 
 class KicadPythonWrapper:
@@ -102,6 +103,12 @@ class KicadPythonWrapper:
             if os.path.exists(path):
                 return path
         return None
+        
+    def _normalize_path(self, path: str) -> str:
+        """Normalize path according to platform."""
+        if platform.system() == "Windows":
+            return str(Path(path).resolve()).replace('/', '\\')
+        return str(Path(path).resolve())
 
     def import_kicad_modules(self) -> Dict[str, Any]:
         """Import and return KiCad modules safely"""

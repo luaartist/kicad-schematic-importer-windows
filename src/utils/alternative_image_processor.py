@@ -120,7 +120,7 @@ class AlternativeImageProcessor:
             return None
     
     def convert_to_svg(self, input_path: str, output_path: str, timeout: int = 30) -> str:
-        """Convert image to SVG safely using AutoTrace."""
+        """Convert image to SVG safely using available tools."""
         input_path = self._validate_input_path(input_path)
         
         # Validate output path is safe
@@ -128,23 +128,47 @@ class AlternativeImageProcessor:
             raise ValueError(f"Unsafe output path: {output_path}")
         output_path = Path(output_path).resolve()
         
-        # Validate AutoTrace installation
-        autotrace_path = self._validate_executable('AutoTrace', shutil.which('autotrace'))
+        # Try Inkscape first if available
+        if self.has_inkscape:
+            try:
+                inkscape_path = self._validate_executable('Inkscape', shutil.which('inkscape'))
+                cmd = [
+                    inkscape_path,
+                    '--export-filename', str(output_path),
+                    '--export-plain-svg',
+                    str(input_path)
+                ]
+                self._run_subprocess(cmd, timeout)
+                
+                if output_path.exists():
+                    return str(output_path)
+            except Exception as e:
+                print(f"Inkscape conversion failed: {e}")
         
-        cmd = [
-            autotrace_path,
-            '--output-file', str(output_path),
-            '--output-format', 'svg',
-            str(input_path)
-        ]
+        # Try AutoTrace if available
+        if self.has_autotrace:
+            try:
+                autotrace_path = self._validate_executable('AutoTrace', shutil.which('autotrace'))
+                cmd = [
+                    autotrace_path,
+                    '--output-file', str(output_path),
+                    '--output-format', 'svg',
+                    str(input_path)
+                ]
+                self._run_subprocess(cmd, timeout)
+                
+                if output_path.exists():
+                    return str(output_path)
+            except Exception as e:
+                print(f"AutoTrace conversion failed: {e}")
         
-        # nosec B603 - all arguments are validated above
-        self._run_subprocess(cmd, timeout)
+        # Use OpenCV as a last resort
+        try:
+            return self._vectorize_with_opencv(input_path)
+        except Exception as e:
+            print(f"OpenCV conversion failed: {e}")
         
-        if not output_path.exists():
-            raise ValueError("AutoTrace failed to create output file")
-        
-        return str(output_path)
+        raise RuntimeError("All conversion methods failed")
     
     def vectorize_image(self, image_path):
         """
@@ -260,9 +284,15 @@ class AlternativeImageProcessor:
         contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
         # Create output path
-        output_path = image_path.replace('.png', '.svg')
-        output_path = output_path.replace('.jpg', '.svg')
-        output_path = output_path.replace('.jpeg', '.svg')
+        output_path = str(image_path)
+        if output_path.lower().endswith('.png'):
+            output_path = output_path.replace('.png', '.svg')
+        elif output_path.lower().endswith('.jpg'):
+            output_path = output_path.replace('.jpg', '.svg')
+        elif output_path.lower().endswith('.jpeg'):
+            output_path = output_path.replace('.jpeg', '.svg')
+        else:
+            output_path = output_path + '.svg'
         
         # Create SVG drawing
         dwg = svgwrite.Drawing(output_path, profile='tiny')
