@@ -118,9 +118,11 @@ class TestSchematicImporter:
         vector_path = test_image_path.replace('.png', '.svg')
         mock_vectorize.return_value = vector_path
         
-        result = schematic_importer.preprocess_image(test_image_path)
-        assert result == vector_path
-        mock_vectorize.assert_called_once_with(test_image_path)
+        with patch.object(schematic_importer.image_processor, 'get_image_dpi', return_value=300.0), \
+             patch.object(schematic_importer.image_processor, 'validate_image_dpi', return_value=300.0):
+            result = schematic_importer.preprocess_image(test_image_path)
+            assert result == vector_path
+            mock_vectorize.assert_called_once_with(test_image_path)
     
     @patch('src.utils.image_processor.ImageProcessor.vectorize_image')
     def test_preprocess_image_vectorization_failure(self, mock_vectorize, schematic_importer, test_image_path):
@@ -128,9 +130,11 @@ class TestSchematicImporter:
         # Mock the vectorize_image method to raise an exception
         mock_vectorize.side_effect = Exception("Vectorization failed")
         
-        with pytest.raises(ValueError) as excinfo:
-            schematic_importer.preprocess_image(test_image_path)
-        assert "Failed to vectorize image" in str(excinfo.value)
+        with patch.object(schematic_importer.image_processor, 'get_image_dpi', return_value=300.0), \
+             patch.object(schematic_importer.image_processor, 'validate_image_dpi', return_value=300.0):
+            with pytest.raises(ValueError) as excinfo:
+                schematic_importer.preprocess_image(test_image_path)
+            assert "Failed to vectorize image" in str(excinfo.value)
     
     @patch('pcbnew.Board')
     def test_import_from_image(self, mock_board, schematic_importer, test_image_path):
