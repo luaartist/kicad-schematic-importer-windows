@@ -1,11 +1,15 @@
 import os
 import sys
+import platform
 from typing import Optional, Dict, Any, Union
 
 class KicadPythonWrapper:
-    """Enhanced wrapper for KiCad Python API with version-specific handling"""
+    """Windows-specific wrapper for KiCad Python API"""
     
     def __init__(self):
+        if platform.system() != "Windows":
+            raise RuntimeError("This plugin only supports Windows")
+            
         self.kicad_version = self._detect_kicad_version()
         self.is_kicad9 = float(self.kicad_version.split('.')[0]) >= 9.0
         self._setup_paths()
@@ -89,15 +93,14 @@ class KicadPythonWrapper:
             sys.path.append(os.path.join(kicad_install, 'lib', 'python'))
     
     def _find_kicad_install(self) -> Optional[str]:
-        """Find KiCad installation directory"""
-        if sys.platform == 'win32':
-            possible_paths = [
-                os.path.join(os.environ.get('ProgramFiles', ''), 'KiCad'),
-                os.path.join(os.environ.get('ProgramFiles(x86)', ''), 'KiCad')
-            ]
-            for path in possible_paths:
-                if os.path.exists(path):
-                    return path
+        """Find KiCad installation directory on Windows"""
+        possible_paths = [
+            os.path.join(os.environ.get('ProgramFiles', ''), 'KiCad'),
+            os.path.join(os.environ.get('ProgramFiles(x86)', ''), 'KiCad')
+        ]
+        for path in possible_paths:
+            if os.path.exists(path):
+                return path
         return None
 
     def import_kicad_modules(self) -> Dict[str, Any]:
