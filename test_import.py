@@ -1,23 +1,17 @@
 import os
 import sys
+import pytest
 
 # Add the parent directory to the path so we can import our modules
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-# Try to import the module
-try:
-    from project_manager import HomeAutomationProjectManager
-    print("Successfully imported HomeAutomationProjectManager")
+def test_import_project_manager():
+    """Test that we can import the HomeAutomationProjectManager class"""
+    from src.core.project_manager import HomeAutomationProjectManager
+    assert HomeAutomationProjectManager is not None
     
-    # Try to create an instance
+def test_create_project_manager_instance():
+    """Test that we can create an instance of HomeAutomationProjectManager"""
+    from src.core.project_manager import HomeAutomationProjectManager
     pm = HomeAutomationProjectManager(None)
-    print("Successfully created HomeAutomationProjectManager instance")
-    
-except Exception as e:
-    print(f"Error: {e}")
-    import traceback
-    traceback.print_exc()
-
-print("Python path:", sys.path)
-print("Current directory:", os.getcwd())
-print("Files in current directory:", os.listdir("."))
+    assert pm is not None
