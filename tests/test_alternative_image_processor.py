@@ -6,7 +6,7 @@ import shutil
 import cv2
 import numpy as np
 import subprocess
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, PropertyMock
 from pathlib import Path
 
 def normalize_path(path: str) -> str:
@@ -92,7 +92,9 @@ class TestAlternativeImageProcessor:
         mock_run.return_value = MagicMock(returncode=0)
         
         # Test successful conversion
-        with patch('pathlib.Path.exists', return_value=True), \
+        mock_exists = PropertyMock(return_value=True)
+        
+        with patch('pathlib.Path.exists', new_callable=PropertyMock, return_value=True), \
              patch('pathlib.Path.resolve', return_value=Path(test_image_path)), \
              patch('src.utils.path_validator.PathValidator.is_safe_executable', return_value=True), \
              patch('src.utils.path_validator.PathValidator.is_safe_output_path', return_value=True):
@@ -102,7 +104,7 @@ class TestAlternativeImageProcessor:
             assert normalize_path(result) == normalize_path(output_path)
         
         # Test with non-existent input file
-        with patch('pathlib.Path.exists', return_value=False), \
+        with patch('pathlib.Path.exists', new_callable=PropertyMock, return_value=False), \
              patch('src.utils.path_validator.PathValidator.is_safe_executable', return_value=True), \
              patch('src.utils.path_validator.PathValidator.is_safe_output_path', return_value=True):
             
@@ -111,10 +113,10 @@ class TestAlternativeImageProcessor:
             assert "Input file not found" in str(excinfo.value)
         
         # Test with non-existent output directory
-        def mock_exists(path):
-            return not str(path).endswith('nonexistent')
-            
-        with patch('pathlib.Path.exists', side_effect=mock_exists), \
+        def exists_side_effect():
+            return False if 'nonexistent' in str(self) else True
+        
+        with patch('pathlib.Path.exists', new_callable=PropertyMock, side_effect=exists_side_effect), \
              patch('src.utils.path_validator.PathValidator.is_safe_executable', return_value=True), \
              patch('src.utils.path_validator.PathValidator.is_safe_output_path', return_value=True):
             
@@ -124,7 +126,8 @@ class TestAlternativeImageProcessor:
         
         # Test with Inkscape not found
         mock_which.return_value = None
-        with patch('pathlib.Path.exists', return_value=True), \
+        
+        with patch('pathlib.Path.exists', new_callable=PropertyMock, return_value=True), \
              patch('src.utils.path_validator.PathValidator.is_safe_executable', return_value=True), \
              patch('src.utils.path_validator.PathValidator.is_safe_output_path', return_value=True):
             
@@ -135,7 +138,8 @@ class TestAlternativeImageProcessor:
         # Test with timeout
         mock_which.return_value = '/usr/bin/inkscape'
         mock_run.side_effect = subprocess.TimeoutExpired(cmd='inkscape', timeout=30)
-        with patch('pathlib.Path.exists', return_value=True), \
+        
+        with patch('pathlib.Path.exists', new_callable=PropertyMock, return_value=True), \
              patch('src.utils.path_validator.PathValidator.is_safe_executable', return_value=True), \
              patch('src.utils.path_validator.PathValidator.is_safe_output_path', return_value=True):
             
@@ -248,8 +252,9 @@ class TestAlternativeImageProcessor:
         vector_path = test_image_path.replace('.png', '.svg')
         
         # Test successful conversion
-        with patch('pathlib.Path.exists', return_value=True), \
-             patch('src.utils.path_validator.PathValidator.is_safe_executable', return_value=True):
+        with patch('pathlib.Path.exists', lambda x: True), \
+             patch('src.utils.path_validator.PathValidator.is_safe_executable', return_value=True), \
+             patch('src.utils.path_validator.PathValidator.is_safe_output_path', return_value=True):
             
             result = image_processor._vectorize_with_autotrace(test_image_path)
             assert normalize_path(result) == normalize_path(vector_path)
@@ -260,11 +265,9 @@ class TestAlternativeImageProcessor:
         mock_run.reset_mock()
         
         # Test with output file not created
-        def mock_exists(path):
-            return '.svg' not in str(path)
-            
-        with patch('pathlib.Path.exists', side_effect=mock_exists), \
-             patch('src.utils.path_validator.PathValidator.is_safe_executable', return_value=True):
+        with patch('pathlib.Path.exists', lambda x: '.svg' not in str(x)), \
+             patch('src.utils.path_validator.PathValidator.is_safe_executable', return_value=True), \
+             patch('src.utils.path_validator.PathValidator.is_safe_output_path', return_value=True):
             
             with pytest.raises(ValueError) as excinfo:
                 image_processor._vectorize_with_autotrace(test_image_path)

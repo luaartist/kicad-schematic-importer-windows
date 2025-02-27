@@ -58,14 +58,15 @@ class SchematicImporter:
             if img is None:
                 raise ValueError("Could not load image")
             
-            # Get image DPI if available
-            dpi = self.image_processor.get_image_dpi(image_path)
-            if dpi and dpi < self.supported_formats['min_resolution']:
-                raise ValueError(f"Image resolution too low. Minimum required: {self.supported_formats['min_resolution']} DPI")
+            # Validate DPI using ImageProcessor
+            self.image_processor.validate_image_dpi(
+                image_path, 
+                min_dpi=self.supported_formats['min_resolution']
+            )
             
             return {
                 'type': 'raster',
-                'dpi': dpi,
+                'dpi': self.image_processor.get_image_dpi(image_path),
                 'dimensions': img.shape,
                 'needs_conversion': True
             }

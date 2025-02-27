@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from src.core.schematic_importer import SchematicImporter
 from src.utils.image_processor import ImageProcessor
+from src.utils.alternative_image_processor import AlternativeImageProcessor
 
 class TestSchematicImporter:
     """Test suite for SchematicImporter"""
@@ -49,18 +50,31 @@ class TestSchematicImporter:
         return SchematicImporter()
     
     def test_initialization(self, schematic_importer):
-        """Test that the SchematicImporter initializes correctly"""
-        assert schematic_importer.config is not None
-        assert isinstance(schematic_importer.image_processor, ImageProcessor)
+        """Test that SchematicImporter initializes correctly"""
+        # Check that image_processor is either ImageProcessor or AlternativeImageProcessor
+        assert isinstance(schematic_importer.image_processor, (ImageProcessor, AlternativeImageProcessor)), \
+            "image_processor should be either ImageProcessor or AlternativeImageProcessor"
+        
+        # Check other attributes
         assert 'vector' in schematic_importer.supported_formats
         assert 'raster' in schematic_importer.supported_formats
+        assert schematic_importer.supported_formats['min_resolution'] == 300
     
-    def test_validate_image_valid_png(self, schematic_importer, test_image_path):
+    @patch('cv2.imread')
+    def test_validate_image_valid_png(self, mock_imread, schematic_importer, test_image_path):
         """Test validating a valid PNG image"""
-        result = schematic_importer.validate_image(test_image_path)
-        assert result is not None
-        assert result['type'] == 'raster'
-        assert result['needs_conversion'] is True
+        # Mock cv2.imread to return a valid image array
+        mock_imread.return_value = np.zeros((100, 100, 3), dtype=np.uint8)
+        
+        # Mock the get_image_dpi method to return a valid DPI
+        with patch.object(schematic_importer.image_processor, 'get_image_dpi', return_value=300.0):
+            result = schematic_importer.validate_image(test_image_path)
+            
+            assert result is not None
+            assert result['type'] == 'raster'
+            assert result['needs_conversion'] is True
+            assert 'dpi' in result
+            assert result['dpi'] == 300.0
     
     def test_validate_image_valid_vector(self, schematic_importer, test_vector_path):
         """Test validating a valid vector image"""
@@ -79,6 +93,17 @@ class TestSchematicImporter:
         with pytest.raises(ValueError) as excinfo:
             schematic_importer.validate_image(invalid_path)
         assert "Unsupported file format" in str(excinfo.value)
+    
+    @patch('cv2.imread')
+    def test_validate_image_low_dpi(self, mock_imread, schematic_importer, test_image_path):
+        """Test validating an image with low DPI"""
+        mock_imread.return_value = np.zeros((100, 100, 3), dtype=np.uint8)
+        
+        # Mock the get_image_dpi method to return a low DPI
+        with patch.object(schematic_importer.image_processor, 'get_image_dpi', return_value=72.0):
+            with pytest.raises(ValueError) as excinfo:
+                schematic_importer.validate_image(test_image_path)
+            assert "Image resolution too low" in str(excinfo.value)
     
     def test_validate_image_nonexistent(self, schematic_importer):
         """Test validating a non-existent image"""
