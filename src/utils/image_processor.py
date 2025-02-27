@@ -30,15 +30,35 @@ class ImageProcessor:
             return False
         return shutil.which(tool_name) is not None
 
+    def check_tool_exists(self, tool_name: str) -> bool:
+        """
+        Check if a required external tool exists in the system PATH
+        
+        Args:
+            tool_name: Name of the tool to check (e.g., 'inkscape')
+            
+        Returns:
+            bool: True if tool exists, False otherwise
+        """
+        return shutil.which(tool_name) is not None
+
     def _validate_path(self, path: str) -> Path:
-        """Validate and resolve path safely."""
-        try:
-            resolved_path = Path(path).resolve()
-            if not resolved_path.is_relative_to(Path.cwd()):
-                raise ValueError("Path must be within current working directory")
-            return resolved_path
-        except Exception as e:
-            raise ValueError(f"Invalid path: {e}")
+        """
+        Validate and resolve path safely.
+        
+        Args:
+            path: Path to validate
+            
+        Returns:
+            Path: Resolved path object
+            
+        Raises:
+            ValueError: If path is invalid or doesn't exist
+        """
+        resolved_path = Path(path).resolve()
+        if not resolved_path.exists():
+            raise ValueError(f"Path does not exist: {resolved_path}")
+        return resolved_path
 
     def _run_subprocess(self, cmd: List[str], timeout: int = 30) -> subprocess.CompletedProcess:
         """

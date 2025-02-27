@@ -1,15 +1,12 @@
 [run]
-source = .
+source = src
+apply = true
 omit = 
-    # Omit test files
     tests/*
-    # Omit virtual environment directories
     venv/*
     env/*
     .venv/*
-    # Omit KiCad-specific files that can't be imported in CI
     __init__.py
-    # Omit setup and configuration files
     setup*.py
     conf*.py
 
@@ -25,3 +22,11 @@ exclude_lines =
     except ImportError
     # Skip main block
     if __name__ == .__main__.:
+    # Skip pass statements
+    pass
+    # Skip repr methods
+    def __repr__
+
+[xml]
+output = coverage.xml
+apply = true

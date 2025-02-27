@@ -96,6 +96,7 @@ class TestImageProcessor:
         output_path = os.path.join(temp_dir, 'output.svg')
         result = image_processor.convert_to_svg(test_image_path, output_path)
         
+        # Normalize paths before comparison
         assert os.path.normcase(result) == os.path.normcase(output_path)
         mock_which.assert_called_once_with('inkscape')
         mock_run.assert_called_once()
