@@ -1,10 +1,13 @@
 import cv2
 import numpy as np
 from PIL import Image
+import os
 import subprocess  # nosec B404 - subprocess usage is validated
 import shutil
+import tempfile
 from pathlib import Path
 from typing import Optional, Tuple, List
+from .path_validator import PathValidator
 
 try:
     import potrace
@@ -19,6 +22,7 @@ class ImageProcessor:
         self.ALLOWED_TOOLS = frozenset({'inkscape', 'potrace'})
         self._validate_tools()
         self.path_validator = PathValidator()
+        self.temp_dir = Path(tempfile.gettempdir())
         
     def _validate_tools(self) -> None:
         """Safely validate and initialize available tools."""
@@ -80,7 +84,9 @@ class ImageProcessor:
 
     def convert_to_svg(self, input_path: str, output_path: str, timeout: int = 30) -> str:
         """Convert image to SVG safely."""
-        input_path = self._validate_input_path(input_path)
+        input_path = Path(input_path).resolve()
+        if not input_path.exists():
+            raise FileNotFoundError(f"Input file not found: {input_path}")
         
         # Validate output path is safe
         if not self.path_validator.is_safe_output_path(output_path):
