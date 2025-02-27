@@ -63,10 +63,19 @@ class ImageProcessor:
               f"Potrace: {self.has_potrace}")
 
     def _check_tool_exists(self, tool_name: str) -> bool:
-        """Safely check if a command-line tool exists."""
+        """Safely check if a command-line tool exists on Windows."""
         if tool_name not in self.ALLOWED_TOOLS:
             return False
-        return shutil.which(tool_name) is not None
+        
+        # Check common Windows installation paths
+        common_paths = [
+            f"C:\\Program Files\\{tool_name}\\bin\\{tool_name}.exe",
+            f"C:\\Program Files\\{tool_name}\\{tool_name}.exe",
+            f"C:\\Program Files (x86)\\{tool_name}\\bin\\{tool_name}.exe",
+            f"C:\\Program Files (x86)\\{tool_name}\\{tool_name}.exe"
+        ]
+        
+        return shutil.which(tool_name) is not None or any(Path(p).exists() for p in common_paths)
 
     def check_tool_exists(self, tool_name: str) -> bool:
         """Check if a required external tool exists in the system PATH."""
@@ -90,14 +99,24 @@ class ImageProcessor:
             raise ValueError(f"Input file not found: {input_path}")
         return input_path
 
-    def _validate_executable(self, tool_name: str, executable_path: Optional[str]) -> str:
-        """Validate executable exists and is safe to use."""
-        if not executable_path:
+    def _validate_executable(self, tool_name: str, path: Optional[str]) -> str:
+        """Validate executable path for Windows."""
+        if not path:
             raise RuntimeError(f"{tool_name} not found")
-        executable_path = Path(executable_path).resolve()
-        if not self.path_validator.is_safe_executable(str(executable_path)):
-            raise ValueError(f"Unsafe executable path: {executable_path}")
-        return str(executable_path)
+        
+        # Convert to Windows path
+        path = str(Path(path).resolve())
+        
+        # Validate path is in Program Files or Windows directory
+        if not any(path.lower().startswith(p.lower()) for p in [
+            "C:\\Program Files",
+            "C:\\Program Files (x86)",
+            "C:\\Windows",
+            "C:\\Windows\\System32"
+        ]):
+            raise ValueError(f"Unsafe executable path: {path}")
+        
+        return path
 
     def _run_subprocess(self, cmd: List[str], timeout: int = 30) -> None:
         """Run subprocess with timeout and validation."""

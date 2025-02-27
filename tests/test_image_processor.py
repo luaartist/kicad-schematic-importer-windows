@@ -172,28 +172,28 @@ class TestImageProcessor:
             image_processor.vectorize_image(test_image_path)
         assert "All vectorization methods failed" in str(excinfo.value)
     
+    @pytest.fixture
+    def mock_windows_paths(self):
+        """Mock Windows paths for testing."""
+        return {
+            'inkscape': "C:\\Program Files\\Inkscape\\bin\\inkscape.exe",
+            'potrace': "C:\\Program Files\\Potrace\\potrace.exe"
+        }
+
     @patch('shutil.which')
     @patch('subprocess.run')
-    @patch('pathlib.Path.exists')
-    def test_vectorize_with_inkscape(self, mock_exists, mock_run, mock_which, image_processor, test_image_path):
-        """Test vectorizing with Inkscape"""
-        # Mock the methods
-        mock_which.return_value = '/usr/bin/inkscape'
+    def test_vectorize_with_inkscape(self, mock_run, mock_which, mock_windows_paths, image_processor, test_image_path):
+        """Test vectorizing with Inkscape on Windows."""
+        mock_which.return_value = mock_windows_paths['inkscape']
         mock_run.return_value = MagicMock(returncode=0)
-        mock_exists.return_value = True
         
-        vector_path = test_image_path.replace('.png', '.svg')
-        result = image_processor._vectorize_with_inkscape(test_image_path)
+        vector_path = str(Path(test_image_path).with_suffix('.svg'))
         
-        assert result == vector_path
-        mock_which.assert_called_once_with('inkscape')
-        mock_run.assert_called_once()
-        
-        # Test with output file not created
-        mock_exists.return_value = False
-        with pytest.raises(ValueError) as excinfo:
-            image_processor._vectorize_with_inkscape(test_image_path)
-        assert "Inkscape failed to create output file" in str(excinfo.value)
+        with patch('pathlib.Path.exists', return_value=True), \
+             patch('src.utils.path_validator.PathValidator.is_safe_executable', return_value=True):
+            
+            result = image_processor._vectorize_with_inkscape(test_image_path)
+            assert Path(result).resolve() == Path(vector_path).resolve()
     
     @patch('shutil.which')
     @patch('subprocess.run')

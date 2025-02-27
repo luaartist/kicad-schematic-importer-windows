@@ -1,18 +1,21 @@
 
 import pytest
-import os
 import sys
-from unittest.mock import MagicMock
+from pathlib import Path
 
-# Add src to path for testing
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+def pytest_configure(config):
+    """Configure pytest for Windows-only testing."""
+    if sys.platform != 'win32':
+        raise pytest.UsageError("These tests can only be run on Windows")
 
-# Create mock modules for KiCad dependencies
-MOCK_MODULES = ['pcbnew', 'wx']
-for mod_name in MOCK_MODULES:
-    sys.modules[mod_name] = MagicMock()
+@pytest.fixture
+def normalize_path():
+    """Normalize paths for Windows comparison."""
+    def _normalize(path):
+        return str(Path(path).resolve())
+    return _normalize
 
-# Mock specific classes and functions used in the code
-sys.modules['pcbnew'].ActionPlugin = MagicMock
-sys.modules['pcbnew'].GetBoard = MagicMock
-sys.modules['wx'].Dialog = MagicMock
+@pytest.fixture
+def test_image_path():
+    """Provide test image path in Windows format."""
+    return str(Path(__file__).parent / 'test_files' / 'test_image.png')
