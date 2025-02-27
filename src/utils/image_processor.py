@@ -101,12 +101,26 @@ class ImageProcessor:
 
     def _run_subprocess(self, cmd: List[str], timeout: int = 30) -> None:
         """Run subprocess with timeout and validation."""
+        if not all(isinstance(arg, str) for arg in cmd):
+            raise ValueError("All command arguments must be strings")
+        
+        if not all(self.path_validator.is_safe_path(arg) for arg in cmd if os.path.exists(arg)):
+            raise ValueError("Unsafe command arguments detected")
+        
         try:
-            subprocess.run(cmd, check=True, timeout=timeout)  # nosec B603
+            # nosec B603 - command and arguments are validated above
+            subprocess.run(
+                cmd,
+                check=True,
+                timeout=timeout,
+                shell=False,  # Explicitly disable shell
+                text=True,
+                capture_output=True
+            )
         except subprocess.TimeoutExpired:
             raise TimeoutError("SVG conversion timed out")
         except subprocess.CalledProcessError as e:
-            raise RuntimeError(f"Command failed with exit code {e.returncode}")
+            raise RuntimeError(f"Command failed with exit code {e.returncode}: {e.stderr}")
 
     def convert_to_svg(self, input_path: str, output_path: str, timeout: int = 30) -> str:
         """Convert image to SVG using available tools."""

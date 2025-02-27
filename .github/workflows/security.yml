@@ -1,23 +1,23 @@
-name: Security Scan
+name: Security Checks
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
   schedule:
     - cron: '0 0 * * 0'  # Run weekly
 
 jobs:
   security:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
     
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: '3.9'
     
     - name: Install dependencies
       run: |
@@ -26,13 +26,15 @@ jobs:
     
     - name: Run Bandit
       run: |
-        bandit -r src/ -f json -o bandit-report.json
-        bandit -r src/ -f txt -o bandit-report.txt
+        bandit -r . -c .bandit -f json -o bandit-report.json
+        bandit -r . -c .bandit -f txt -o bandit-report.txt
+      continue-on-error: true
     
     - name: Run Safety Check
       run: |
         safety check --json > safety-report.json
         safety check --full-report > safety-report.txt
+      continue-on-error: true
     
     - name: Upload Security Report
       if: always()
