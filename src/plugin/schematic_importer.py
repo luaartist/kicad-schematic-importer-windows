@@ -24,10 +24,10 @@ class SchematicImporterPlugin(pcbnew.ActionPlugin):
         
         if result == wx.ID_OK:
             try:
-                # Process the image and create schematic
-                image_path = dialog.get_image_path()
-                svg_path = self.processor.convert_to_svg(image_path)
-                self.import_schematic(board, svg_path)
+                # Process the vector file
+                file_path = dialog.get_file_path()
+                processed_path = self.processor.process_vector_file(file_path)
+                self.import_schematic(board, processed_path)
                 pcbnew.Refresh()
             except Exception as e:
                 wx.MessageBox(f"Error importing schematic: {str(e)}", 
