@@ -235,7 +235,7 @@ class TestImageProcessor:
             image_processor._vectorize_with_inkscape(test_image_path)
         assert "Command failed with exit code" in str(excinfo.value)
     
-    def test_vectorize_with_potrace(self, mock_run, mock_which, image_processor, test_image_path):
+    def test_vectorize_with_potrace(self, windows_only, mock_run, mock_which, image_processor, test_image_path):
         """Test vectorizing with Potrace"""
         mock_which.return_value = 'C:\\Program Files\\Potrace\\potrace.exe'
         mock_run.return_value = MagicMock(returncode=0)

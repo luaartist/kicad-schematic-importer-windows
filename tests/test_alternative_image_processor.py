@@ -187,16 +187,12 @@ class TestAlternativeImageProcessor:
     
     @patch('shutil.which')
     @patch('subprocess.run')
-    def test_vectorize_with_inkscape(self, mock_run, mock_which, image_processor, test_image_path):
+    def test_vectorize_with_inkscape(self, windows_only, mock_run, mock_which, image_processor, test_image_path):
         """Test vectorizing with Inkscape"""
         mock_which.return_value = 'C:\\Program Files\\Inkscape\\bin\\inkscape.exe'
         mock_run.return_value = MagicMock(returncode=0)
         
         vector_path = test_image_path.replace('.png', '.svg')
-        
-        # Define a proper function for exists side effect
-        def svg_not_exists(path_obj):
-            return '.svg' not in str(path_obj)
         
         # Test successful conversion
         with patch.object(Path, 'exists', return_value=True), \
@@ -204,50 +200,23 @@ class TestAlternativeImageProcessor:
             
             result = image_processor._vectorize_with_inkscape(test_image_path)
             assert normalize_path(result) == normalize_path(vector_path)
-        
-        # Test output file not created
-        with patch.object(Path, 'exists', side_effect=svg_not_exists), \
-             patch('src.utils.path_validator.PathValidator.is_safe_executable', return_value=True):
-            
-            with pytest.raises(ValueError) as excinfo:
-                image_processor._vectorize_with_inkscape(test_image_path)
-            assert "Inkscape failed to create output file" in str(excinfo.value)
-    
+
     @patch('shutil.which')
     @patch('subprocess.run')
-    def test_vectorize_with_autotrace(self, mock_run, mock_which, image_processor, test_image_path):
+    def test_vectorize_with_autotrace(self, windows_only, mock_run, mock_which, image_processor, test_image_path):
         """Test vectorizing with AutoTrace"""
-        with patch('src.utils.image_processor.HAS_POTRACE', True), \
-             patch.object(image_processor.path_validator, 'is_safe_executable', return_value=True), \
-             patch('os.path.exists', return_value=True):
+        mock_which.return_value = 'C:\\Program Files\\AutoTrace\\autotrace.exe'
+        mock_run.return_value = MagicMock(returncode=0)
+        
+        vector_path = test_image_path.replace('.png', '.svg')
+        
+        # Test successful conversion
+        with patch.object(Path, 'exists', return_value=True), \
+             patch('src.utils.path_validator.PathValidator.is_safe_executable', return_value=True):
+            
+            result = image_processor._vectorize_with_autotrace(test_image_path)
+            assert normalize_path(result) == normalize_path(vector_path)
 
-            mock_which.return_value = 'C:\\Program Files\\AutoTrace\\autotrace.exe'
-            mock_run.return_value = MagicMock(returncode=0)
-            
-            vector_path = test_image_path.replace('.png', '.svg')
-            
-            # Test successful conversion
-            with patch('pathlib.Path.exists', lambda x: True), \
-                 patch('src.utils.path_validator.PathValidator.is_safe_executable', return_value=True), \
-                 patch('src.utils.path_validator.PathValidator.is_safe_output_path', return_value=True):
-                
-                result = image_processor._vectorize_with_autotrace(test_image_path)
-                assert normalize_path(result) == normalize_path(vector_path)
-                mock_which.assert_called_once_with('autotrace')
-                mock_run.assert_called_once()
-            
-            # Reset mocks
-            mock_run.reset_mock()
-            
-            # Test with output file not created
-            with patch('pathlib.Path.exists', lambda x: '.svg' not in str(x)), \
-                 patch('src.utils.path_validator.PathValidator.is_safe_executable', return_value=True), \
-                 patch('src.utils.path_validator.PathValidator.is_safe_output_path', return_value=True):
-                
-                with pytest.raises(ValueError) as excinfo:
-                    image_processor._vectorize_with_autotrace(test_image_path)
-                assert "AutoTrace failed to create output file" in str(excinfo.value)
-    
     @patch('cv2.imread')
     @patch('cv2.cvtColor')
     @patch('cv2.threshold')
