@@ -2,14 +2,37 @@ import cv2
 import numpy as np
 import os
 import pcbnew
+import importlib.util
+
+# Try to import the ImageProcessor
 from ..utils.image_processor import ImageProcessor
+
+# Check if we can import the AlternativeImageProcessor
+alt_processor_spec = importlib.util.find_spec("src.utils.alternative_image_processor")
+has_alt_processor = alt_processor_spec is not None
+
+if has_alt_processor:
+    from ..utils.alternative_image_processor import AlternativeImageProcessor
 
 class SchematicImporter:
     """Main class for importing schematics from images"""
     
     def __init__(self, config_path=None):
         self.config = self._load_config(config_path)
-        self.image_processor = ImageProcessor()
+        
+        # Try to use the regular ImageProcessor first
+        try:
+            self.image_processor = ImageProcessor()
+            print("Using standard ImageProcessor")
+        except Exception as e:
+            # If it fails (e.g., potrace not available), use the alternative processor
+            if has_alt_processor:
+                self.image_processor = AlternativeImageProcessor()
+                print("Using AlternativeImageProcessor as fallback")
+            else:
+                # If alternative processor is not available, re-raise the exception
+                raise e
+        
         self.supported_formats = {
             'vector': ['.svg', '.pdf', '.eps'],
             'raster': ['.png', '.jpg', '.jpeg', '.tiff'],

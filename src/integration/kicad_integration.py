@@ -2,7 +2,13 @@ from .kicad_python_wrapper import KicadPythonWrapper
 import os
 import cv2
 import numpy as np
-from skidl import *
+
+# Try to import skidl, but don't fail if it's not available
+try:
+    from skidl import *
+    HAS_SKIDL = True
+except ImportError:
+    HAS_SKIDL = False
 
 class KiCadSchematicGenerator:
     def __init__(self, output_dir="kicad_output"):
@@ -164,6 +170,10 @@ class KiCadSchematicGenerator:
     
     def generate_netlist_with_skidl(self, components, connections):
         """Generate netlist using SKiDL"""
+        if not HAS_SKIDL:
+            print("Warning: SKiDL is not available. Netlist generation skipped.")
+            return None
+            
         # Start a new circuit
         reset()
         
@@ -239,7 +249,10 @@ def main():
         # Generate netlist
         print("Generating netlist...")
         netlist_path = generator.generate_netlist_with_skidl(components, connections)
-        print(f"Netlist generated: {netlist_path}")
+        if netlist_path:
+            print(f"Netlist generated: {netlist_path}")
+        else:
+            print("Netlist generation skipped (SKiDL not available)")
         
         # Save KiCad project
         print("Saving KiCad project...")
