@@ -1,0 +1,34 @@
+{
+  "api_key": "",
+  "api_url": "",
+  "use_online_detection": true,
+  "fallback_to_local": true,
+  "save_debug_images": true,
+  "debug_dir": "debug",
+  "component_templates": {
+    "resistor": {
+      "pins": 2,
+      "footprint": "Resistor_SMD:R_0805_2012Metric"
+    },
+    "capacitor": {
+      "pins": 2,
+      "footprint": "Capacitor_SMD:C_0805_2012Metric"
+    },
+    "ic": {
+      "pins": 8,
+      "footprint": "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm"
+    },
+    "connector": {
+      "pins": 4,
+      "footprint": "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical"
+    },
+    "diode": {
+      "pins": 2,
+      "footprint": "Diode_SMD:D_SOD-123"
+    },
+    "transistor": {
+      "pins": 3,
+      "footprint": "Package_TO_SOT_SMD:SOT-23"
+    }
+  }
+}

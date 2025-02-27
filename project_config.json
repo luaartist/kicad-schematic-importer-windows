@@ -1,0 +1,18 @@
+{
+  "project_name": "Home Automation Project",
+  "created_date": "2025-02-25T06:33:43.003292",
+  "last_modified": "2025-02-25T06:33:43.003292",
+  "components": [],
+  "modules": [],
+  "reminders": [],
+  "structure": {
+    "kicad_projects": "kicad_projects",
+    "schematics": "schematics",
+    "firmware": "firmware",
+    "documentation": "docs",
+    "models": "models",
+    "plugins": "plugins",
+    "tests": "tests",
+    "data": "data"
+  }
+}

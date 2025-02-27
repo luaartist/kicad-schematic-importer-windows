@@ -1,0 +1,28 @@
+# Core dependencies
+opencv-python>=4.5.0
+numpy>=1.20.0
+matplotlib>=3.4.0
+scikit-image>=0.18.0
+pillow>=8.0.0
+skidl>=1.0.0  # For KiCad schematic generation
+
+# KiCad integration
+# Note: pcbnew is typically installed with KiCad and not via pip
+
+# AI/ML dependencies (for component detection)
+tensorflow>=2.8.0; platform_system != "Windows" or platform_machine != "ARM64"
+tensorflow-macos>=2.8.0; platform_system == "Darwin" and platform_machine == "arm64"
+scikit-learn>=1.0.0
+
+# UI dependencies
+wxPython>=4.1.0
+
+# Testing dependencies (aligned with CI workflow)
+pytest>=7.1.2
+pytest-cov>=4.1.0  # Changed from 6.0.0 to 4.1.0 which is available
+flake8>=7.1.2
+coverage>=7.3.2  # Compatible with pytest-cov 4.1.0
+
+# Build dependencies
+setuptools>=65.0.0
+wheel>=0.37.0

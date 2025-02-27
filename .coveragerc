@@ -1,0 +1,27 @@
+[run]
+source = .
+omit = 
+    # Omit test files
+    tests/*
+    # Omit virtual environment directories
+    venv/*
+    env/*
+    .venv/*
+    # Omit KiCad-specific files that can't be imported in CI
+    __init__.py
+    # Omit setup and configuration files
+    setup*.py
+    conf*.py
+
+[report]
+exclude_lines =
+    # Skip any pragma comments
+    pragma: no cover
+    # Skip defensive assertion code
+    raise NotImplementedError
+    # Skip abstract methods
+    @abstract
+    # Skip imports that might fail
+    except ImportError
+    # Skip main block
+    if __name__ == .__main__.:
