@@ -24,13 +24,15 @@ jobs:
         python -m pip install --upgrade pip
         pip install bandit safety
     
-    - name: Run Bandit (with fallback)
+    - name: Run Bandit
       run: |
-        bandit -r src/ || bandit -r src/ -f txt
+        bandit -r src/ -f json -o bandit-report.json
+        bandit -r src/ -f txt -o bandit-report.txt
     
     - name: Run Safety Check
       run: |
-        safety check || safety check --full-report
+        safety check --json > safety-report.json
+        safety check --full-report > safety-report.txt
     
     - name: Upload Security Report
       if: always()
