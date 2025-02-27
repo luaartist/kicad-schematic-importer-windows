@@ -221,7 +221,7 @@ class TestAlternativeImageProcessor:
         vector_path = test_image_path.replace('.png', '.svg')
         
         # Test successful conversion
-        with patch('pathlib.Path.exists', return_value=True), \
+        with patch('pathlib.Path.exists', lambda x: True), \
              patch('src.utils.path_validator.PathValidator.is_safe_executable', return_value=True):
             
             result = image_processor._vectorize_with_inkscape(test_image_path)

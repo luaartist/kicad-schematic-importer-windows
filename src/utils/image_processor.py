@@ -17,10 +17,14 @@ except ImportError:
     HAS_POTRACE = False
 
 class ImageProcessor:
-    """Utility class for image processing and conversion"""
+    """Image processor class that provides methods for vectorizing images."""
+    
+    ALLOWED_TOOLS = ['inkscape', 'potrace']
     
     def __init__(self):
+        """Initialize the image processor."""
         self.path_validator = PathValidator()
+        self._validate_tools()
         self.command_generator = ConversionCommandGenerator()
         self.conversion_callback: Optional[Callable] = None
     
@@ -276,3 +280,14 @@ class ImageProcessor:
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1">
     <path d="{path_data}" fill="none" stroke="black"/>
 </svg>'''
+
+    def check_tool_exists(self, tool_name: str) -> bool:
+        """Check if a tool exists in the system PATH.
+        
+        Args:
+            tool_name: Name of the tool to check
+        
+        Returns:
+            bool: True if tool exists, False otherwise
+        """
+        return bool(shutil.which(tool_name))

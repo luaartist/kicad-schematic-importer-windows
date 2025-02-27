@@ -87,42 +87,43 @@ class TestImageProcessor:
     @patch('subprocess.run')
     def test_convert_to_svg(self, mock_run, mock_which, image_processor, test_image_path, temp_dir):
         """Test converting an image to SVG"""
-        # Mock the shutil.which method to return a path
-        mock_which.return_value = 'C:\\Program Files\\Inkscape\\bin\\inkscape.exe'
+        # Mock the path validator to allow the Inkscape path
+        with patch.object(image_processor.path_validator, 'is_safe_executable', return_value=True):
+            # Mock the shutil.which method to return a path
+            mock_which.return_value = 'C:\\Program Files\\Inkscape\\bin\\inkscape.exe'
         
-        # Mock the subprocess.run method
-        mock_run.return_value = MagicMock(returncode=0)
+            # Mock the subprocess.run method
+            mock_run.return_value = MagicMock(returncode=0)
         
-        output_path = os.path.join(temp_dir, 'output.svg')
-        result = image_processor.convert_to_svg(test_image_path, output_path)
+            output_path = os.path.join(temp_dir, 'output.svg')
+            result = image_processor.convert_to_svg(test_image_path, output_path)
+            
+            assert result == output_path
+            mock_which.assert_called_once_with('inkscape')
+            mock_run.assert_called_once()
         
-        # Normalize paths before comparison
-        assert os.path.normcase(result) == os.path.normcase(output_path)
-        mock_which.assert_called_once_with('inkscape')
-        mock_run.assert_called_once()
+            # Test with non-existent input file
+            with pytest.raises(ValueError) as excinfo:
+                image_processor.convert_to_svg('nonexistent.png', output_path)
+            assert "Input image not found" in str(excinfo.value)
         
-        # Test with non-existent input file
-        with pytest.raises(ValueError) as excinfo:
-            image_processor.convert_to_svg('nonexistent.png', output_path)
-        assert "Input image not found" in str(excinfo.value)
+            # Test with non-existent output directory
+            with pytest.raises(ValueError) as excinfo:
+                image_processor.convert_to_svg(test_image_path, '/nonexistent/dir/output.svg')
+            assert "Output directory does not exist" in str(excinfo.value)
         
-        # Test with non-existent output directory
-        with pytest.raises(ValueError) as excinfo:
-            image_processor.convert_to_svg(test_image_path, '/nonexistent/dir/output.svg')
-        assert "Output directory does not exist" in str(excinfo.value)
+            # Test with Inkscape not found
+            mock_which.return_value = None
+            with pytest.raises(RuntimeError) as excinfo:
+                image_processor.convert_to_svg(test_image_path, output_path)
+            assert "Inkscape not found" in str(excinfo.value)
         
-        # Test with Inkscape not found
-        mock_which.return_value = None
-        with pytest.raises(RuntimeError) as excinfo:
-            image_processor.convert_to_svg(test_image_path, output_path)
-        assert "Inkscape not found" in str(excinfo.value)
-        
-        # Test with timeout
-        mock_which.return_value = '/usr/bin/inkscape'
-        mock_run.side_effect = subprocess.TimeoutExpired(cmd='inkscape', timeout=30)
-        with pytest.raises(TimeoutError) as excinfo:
-            image_processor.convert_to_svg(test_image_path, output_path)
-        assert "SVG conversion timed out" in str(excinfo.value)
+            # Test with timeout
+            mock_which.return_value = '/usr/bin/inkscape'
+            mock_run.side_effect = subprocess.TimeoutExpired(cmd='inkscape', timeout=30)
+            with pytest.raises(TimeoutError) as excinfo:
+                image_processor.convert_to_svg(test_image_path, output_path)
+            assert "SVG conversion timed out" in str(excinfo.value)
     
     @patch.object(ImageProcessor, '_vectorize_with_inkscape')
     @patch.object(ImageProcessor, '_vectorize_with_potrace')
@@ -219,23 +220,30 @@ class TestImageProcessor:
     @patch('pathlib.Path.exists')
     def test_vectorize_with_potrace(self, mock_exists, mock_run, mock_which, image_processor, test_image_path):
         """Test vectorizing with Potrace"""
-        # Mock the methods
-        mock_which.return_value = 'C:\\Program Files\\Potrace\\potrace.exe'
-        mock_run.return_value = MagicMock(returncode=0)
-        mock_exists.return_value = True
+        with patch.object(image_processor.path_validator, 'is_safe_executable', return_value=True), \
+             patch('os.path.exists', return_value=True):  # Mock os.path.exists too
         
-        vector_path = test_image_path.replace('.png', '.svg')
-        result = image_processor._vectorize_with_potrace(test_image_path)
+            # Mock the methods
+            mock_which.return_value = 'C:\\Program Files\\Potrace\\potrace.exe'
+            mock_run.return_value = MagicMock(returncode=0)
+            mock_exists.return_value = True
         
-        assert os.path.normcase(result) == os.path.normcase(vector_path)
-        mock_which.assert_called_once_with('potrace')
-        mock_run.assert_called_once()
+            vector_path = test_image_path.replace('.png', '.svg')
+            result = image_processor._vectorize_with_potrace(test_image_path)
         
-        # Test with output file not created
-        mock_exists.return_value = False
-        with pytest.raises(ValueError) as excinfo:
-            image_processor._vectorize_with_potrace(test_image_path)
-        assert "Potrace failed to create output file" in str(excinfo.value)
+            assert os.path.normcase(result) == os.path.normcase(vector_path)
+            mock_which.assert_called_once_with('potrace')
+            mock_run.assert_called_once()
+        
+            # Reset mocks
+            mock_exists.reset_mock()
+            mock_run.reset_mock()
+        
+            # Test with output file not created
+            mock_exists.return_value = False
+            with pytest.raises(ValueError) as excinfo:
+                image_processor._vectorize_with_potrace(test_image_path)
+            assert "Potrace failed to create output file" in str(excinfo.value)
     
     @pytest.mark.skipif(not HAS_POTRACE, reason="Potrace library not available")
     def test_vectorize_builtin(self, image_processor, test_image_path):
