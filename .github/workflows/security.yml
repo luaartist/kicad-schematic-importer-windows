@@ -24,8 +24,19 @@ jobs:
         python -m pip install --upgrade pip
         pip install bandit safety
     
-    - name: Run Bandit
-      run: bandit -r src/ -c pyproject.toml
+    - name: Run Bandit (with fallback)
+      run: |
+        bandit -r src/ || bandit -r src/ -f txt
     
     - name: Run Safety Check
-      run: safety check
+      run: |
+        safety check || safety check --full-report
+    
+    - name: Upload Security Report
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-report
+        path: |
+          bandit-report.*
+          safety-report.*
