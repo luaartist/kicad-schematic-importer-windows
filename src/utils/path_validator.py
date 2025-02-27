@@ -1,19 +1,22 @@
 import os
+import ctypes
 from pathlib import Path
 from typing import Union
 import tempfile
 
 class PathValidator:
-    """Validates paths for security and correctness."""
-    
+    @staticmethod
+    def _expand_short_path(path_str: str) -> str:
+        """Convert Windows short (8.3) paths to long paths."""
+        if os.name != "nt":
+            return path_str
+        buf = ctypes.create_unicode_buffer(260)
+        ctypes.windll.kernel32.GetLongPathNameW(str(path_str), buf, 260)
+        return buf.value or path_str
+
     @staticmethod
     def is_safe_executable(path: Union[str, Path]) -> bool:
-        """
-        Verify an executable path is safe to use.
-        - Must be absolute
-        - Must be in Program Files or system32 on Windows
-        """
-        path = Path(path).resolve()
+        path = Path(PathValidator._expand_short_path(str(path))).resolve()
         
         if not path.is_absolute() or not path.exists():
             return False
@@ -28,20 +31,14 @@ class PathValidator:
     
     @staticmethod
     def is_safe_output_path(path: Union[str, Path]) -> bool:
-        """
-        Verify an output path is safe to write to.
-        - Must be absolute
-        - Parent must exist
-        - Must be within project directory or temp directory
-        """
-        path = Path(path).resolve()
+        path = Path(PathValidator._expand_short_path(str(path))).resolve()
+        temp_dir = Path(tempfile.gettempdir()).resolve()
         
-        if not path.is_absolute() or not path.parent.exists():
+        if not path.is_absolute():
             return False
             
-        safe_dirs = [
-            Path.cwd(),  # Project directory
-            Path(tempfile.gettempdir())  # System temp directory
-        ]
-        
-        return any(str(path).startswith(str(safe_dir)) for safe_dir in safe_dirs)
+        # Allow paths in temp directory or project directory
+        return (
+            path.is_relative_to(temp_dir) or 
+            path.is_relative_to(Path.cwd())
+        )

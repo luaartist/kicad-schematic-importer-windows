@@ -53,6 +53,10 @@ class AlternativeImageProcessor:
         """
         return shutil.which(tool_name) is not None
 
+    def _validate_path(self, path: str) -> Path:
+        """Backwards compatibility method for _validate_input_path"""
+        return self._validate_input_path(path)
+    
     def _validate_input_path(self, path: str) -> Path:
         """Validate that an input path exists."""
         resolved_path = Path(path).resolve()
@@ -177,8 +181,8 @@ class AlternativeImageProcessor:
     
     def _vectorize_with_inkscape(self, image_path: str) -> str:
         """Safely vectorize using Inkscape."""
-        image_path = self._validate_path(image_path)
-        output_path = image_path.with_suffix('.svg')
+        input_path = self._validate_input_path(image_path)
+        output_path = input_path.with_suffix('.svg')
         
         inkscape_path = shutil.which('inkscape')
         if not inkscape_path:
@@ -188,13 +192,13 @@ class AlternativeImageProcessor:
             inkscape_path,
             '--export-filename', str(output_path),
             '--export-plain-svg',
-            str(image_path)
+            str(input_path)
         ]
         
         self._run_subprocess(cmd)
         
         if not output_path.exists():
-            raise ValueError(f"Inkscape failed to create output file: {output_path}")
+            raise ValueError("Inkscape failed to create output file")
         return str(output_path)
     
     def _vectorize_with_autotrace(self, image_path: str) -> str:
