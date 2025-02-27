@@ -1,11 +1,5 @@
-
-import pytest
-import os
 import sys
 from unittest.mock import MagicMock
-
-# Add src to path for testing
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Create mock modules for KiCad dependencies
 MOCK_MODULES = ['pcbnew', 'wx']

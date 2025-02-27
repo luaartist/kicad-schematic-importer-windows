@@ -39,6 +39,6 @@ jobs:
         python -m pytest test_import.py -v
     
     - name: Upload coverage
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         file: ./coverage.xml

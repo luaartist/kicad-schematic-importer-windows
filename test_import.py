@@ -7,11 +7,13 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 def test_import_project_manager():
     """Test that we can import the HomeAutomationProjectManager class"""
+    # Use direct import instead of relative import
     from src.core.project_manager import HomeAutomationProjectManager
     assert HomeAutomationProjectManager is not None
     
 def test_create_project_manager_instance():
     """Test that we can create an instance of HomeAutomationProjectManager"""
+    # Use direct import instead of relative import
     from src.core.project_manager import HomeAutomationProjectManager
     pm = HomeAutomationProjectManager(None)
     assert pm is not None

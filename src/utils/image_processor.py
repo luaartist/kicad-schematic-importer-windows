@@ -1,11 +1,17 @@
 import cv2
 import numpy as np
 from PIL import Image
-import potrace
 import subprocess
 import shutil
 from pathlib import Path
 from typing import Optional, Tuple, List
+
+# Try to import potrace, but don't fail if it's not available
+try:
+    import potrace
+    HAS_POTRACE = True
+except ImportError:
+    HAS_POTRACE = False
 
 class ImageProcessor:
     """Utility class for image processing and conversion"""
@@ -145,6 +151,9 @@ class ImageProcessor:
     
     def _vectorize_builtin(self, image_path: str) -> str:
         """Built-in vectorization using OpenCV and potrace library."""
+        if not HAS_POTRACE:
+            raise ValueError("Python-potrace library is not available. Please install it with 'pip install python-potrace'")
+            
         img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
         if img is None:
             raise ValueError(f"Failed to load image: {image_path}")

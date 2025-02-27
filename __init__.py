@@ -1,8 +1,8 @@
 import os
 import pcbnew
 import wx
-from .src.core.schematic_importer import SchematicImporter
-from .src.ui.import_dialog import ImportDialog
+from src.core.schematic_importer import SchematicImporter
+from src.ui.import_dialog import ImportDialog
 
 class SchematicImporterPlugin(pcbnew.ActionPlugin):
     def defaults(self):
