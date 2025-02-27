@@ -1,7 +1,8 @@
 import pcbnew
 import wx
 from pathlib import Path
-from .utils.alternative_image_processor import AlternativeImageProcessor
+from ..utils.alternative_image_processor import AlternativeImageProcessor
+from ..ui.import_dialog import ImportDialog
 
 class SchematicImporterPlugin(pcbnew.ActionPlugin):
     def __init__(self):
