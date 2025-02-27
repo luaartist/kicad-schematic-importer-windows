@@ -38,10 +38,10 @@ jobs:
     - name: Test with pytest
       run: |
         # Create a basic test file if none exist
-        mkdir -p tests
-        if [ ! -f tests/test_basic.py ]; then
-          echo 'def test_placeholder(): assert True' > tests/test_basic.py
-        fi
+        if not exist tests mkdir tests
+        if not exist tests\test_basic.py (
+          echo def test_placeholder(): assert True > tests\test_basic.py
+        )
         
         # Run tests with error handling
         python -m pytest tests/ -v || echo "Some tests failed, but continuing workflow"

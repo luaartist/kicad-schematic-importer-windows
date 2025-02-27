@@ -69,10 +69,11 @@ jobs:
     - name: Test with pytest
       run: |
         # Create a basic test file if none exist
-        mkdir -p tests
-        if [ ! -f tests/test_basic.py ]; then
-          echo 'def test_placeholder(): assert True' > tests/test_basic.py
-        fi
+        ensure_directory_exists("tests")
+        test_file_path = "tests/test_basic.py"
+        if not os.path.isfile(test_file_path):
+            with open(test_file_path, 'w') as f:
+                f.write('def test_placeholder(): assert True\n')
         
         # Run tests with error handling
         python -m pytest tests/ -v || echo "Some tests failed, but continuing workflow"
