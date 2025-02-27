@@ -6,7 +6,8 @@ import subprocess  # nosec B404 - subprocess usage is validated
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Callable
+from .command_generator import ConversionCommandGenerator
 from .path_validator import PathValidator
 
 try:
@@ -19,33 +20,61 @@ class ImageProcessor:
     """Utility class for image processing and conversion"""
     
     def __init__(self):
-        self.ALLOWED_TOOLS = frozenset({'inkscape', 'potrace'})
-        self._validate_tools()
         self.path_validator = PathValidator()
-        self.temp_dir = Path(tempfile.gettempdir())
-        
-    def _validate_tools(self) -> None:
-        """Safely validate and initialize available tools."""
-        self.has_inkscape = self._check_tool_exists('inkscape')
-        self.has_potrace = self._check_tool_exists('potrace')
-        
-    def _check_tool_exists(self, tool_name: str) -> bool:
-        """Safely check if external tool is available."""
-        if tool_name not in self.ALLOWED_TOOLS:
-            return False
-        return shutil.which(tool_name) is not None
-
-    def check_tool_exists(self, tool_name: str) -> bool:
-        """
-        Check if a required external tool exists in the system PATH
-        
-        Args:
-            tool_name: Name of the tool to check (e.g., 'inkscape')
+        self.command_generator = ConversionCommandGenerator()
+        self.conversion_callback: Optional[Callable] = None
+    
+    def set_conversion_callback(self, callback: Callable):
+        """Set callback for handling external conversions"""
+        self.conversion_callback = callback
+    
+    def get_conversion_commands(self, input_path: str, output_path: str) -> dict:
+        """Get available conversion commands without executing them"""
+        if not self.path_validator.is_safe_input_path(input_path):
+            raise ValueError(f"Unsafe input path: {input_path}")
+        if not self.path_validator.is_safe_output_path(output_path):
+            raise ValueError(f"Unsafe output path: {output_path}")
             
-        Returns:
-            bool: True if tool exists, False otherwise
-        """
-        return shutil.which(tool_name) is not None
+        return self.command_generator.get_available_commands(input_path, output_path)
+    
+    def convert_to_svg(self, input_path: str, output_path: str) -> str:
+        """Convert image to SVG using user-provided callback or manual instructions"""
+        commands = self.get_conversion_commands(input_path, output_path)
+        
+        if not commands:
+            raise RuntimeError("No conversion tools available")
+        
+        if self.conversion_callback:
+            # Use callback if provided
+            return self.conversion_callback(commands, input_path, output_path)
+        else:
+            # Provide instructions for manual conversion
+            instructions = self._generate_conversion_instructions(commands)
+            return instructions
+    
+    def _generate_conversion_instructions(self, commands: dict) -> str:
+        """Generate human-readable conversion instructions"""
+        instructions = ["To convert the image, you can use any of these commands:"]
+        
+        for tool, cmd in commands.items():
+            instructions.append(f"\n{tool.title()}:")
+            instructions.append(" ".join(cmd))
+        
+        instructions.append("\nAfter converting, provide the SVG file path to continue processing.")
+        return "\n".join(instructions)
+    
+    def validate_converted_file(self, svg_path: str) -> bool:
+        """Validate that a manually converted SVG file exists and is valid"""
+        if not self.path_validator.is_safe_input_path(svg_path):
+            raise ValueError(f"Unsafe SVG path: {svg_path}")
+            
+        svg_path = Path(svg_path)
+        if not svg_path.exists():
+            raise FileNotFoundError(f"SVG file not found: {svg_path}")
+        if svg_path.suffix.lower() != '.svg':
+            raise ValueError(f"File must be SVG format: {svg_path}")
+            
+        return True
 
     def _validate_input_path(self, path: str) -> Path:
         """Validate that an input path exists."""
