@@ -16,18 +16,19 @@ jobs:
           pip install pytest pytest-cov flake8
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
-      - name: Run tests
-        shell: pwsh
+      - name: Lint with flake8
         run: |
-          if (!(Test-Path tests)) {
-            New-Item -ItemType Directory -Path tests
-          }
-          if (!(Test-Path tests/test_basic.py)) {
-            Set-Content -Path tests/test_basic.py -Value 'def test_placeholder(): assert True'
-          }
-          python -m pytest tests/ -v
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+      - name: Run tests with coverage
+        run: |
+          python -m pytest tests/ -v --cov=src --cov-report=xml --cov-config=.coveragerc
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          fail_ci_if_error: true
+          verbose: true

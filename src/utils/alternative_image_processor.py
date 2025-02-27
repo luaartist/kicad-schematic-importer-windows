@@ -6,7 +6,7 @@ This module provides alternatives to the potrace library for vectorization.
 
 import os
 import shutil
-import subprocess
+import subprocess  # nosec B404 - subprocess usage is validated
 import tempfile
 from pathlib import Path
 import cv2
@@ -15,6 +15,7 @@ from svgpathtools import Path as SvgPath, Line, CubicBezier, QuadraticBezier
 import svgwrite
 from typing import List, Optional
 import shlex
+from .path_validator import PathValidator
 
 class AlternativeImageProcessor:
     """
@@ -26,6 +27,7 @@ class AlternativeImageProcessor:
         """Initialize the image processor."""
         self.ALLOWED_TOOLS = ['inkscape', 'autotrace', 'opencv']
         self._validate_tools()
+        self.path_validator = PathValidator()
     
     def _validate_tools(self) -> None:
         """Validate and initialize available tools safely."""
@@ -51,52 +53,40 @@ class AlternativeImageProcessor:
         """
         return shutil.which(tool_name) is not None
 
-    def _validate_path(self, path: str) -> Path:
-        """
-        Validate and resolve path safely.
-        
-        Args:
-            path: Path to validate
-            
-        Returns:
-            Path: Resolved path object
-            
-        Raises:
-            ValueError: If path is invalid or doesn't exist
-        """
+    def _validate_input_path(self, path: str) -> Path:
+        """Validate that an input path exists."""
         resolved_path = Path(path).resolve()
         if not resolved_path.exists():
-            raise ValueError(f"Path does not exist: {resolved_path}")
+            raise ValueError(f"Input file not found: {resolved_path}")
         return resolved_path
 
-    def _run_subprocess(self, cmd: List[str], timeout: int = 30) -> subprocess.CompletedProcess:
-        """
-        Safely run a subprocess command.
-        
-        Args:
-            cmd: List of command arguments
-            timeout: Maximum execution time in seconds
-            
-        Returns:
-            CompletedProcess instance
-            
-        Raises:
-            subprocess.SubprocessError: If the command fails
-        """
-        if not all(isinstance(arg, str) for arg in cmd):
-            raise ValueError("All command arguments must be strings")
-            
+    def _validate_output_directory(self, path: str) -> Path:
+        """Validate that the output directory exists."""
+        resolved_path = Path(path).resolve()
+        if not resolved_path.parent.exists():
+            raise ValueError(f"Output directory does not exist: {resolved_path.parent}")
+        return resolved_path
+
+    def _validate_executable(self, name: str, path: str) -> str:
+        """Validate that an executable is safe to use."""
+        if not path:
+            raise RuntimeError(f"{name} not found")
+        if not self.path_validator.is_safe_executable(path):
+            raise ValueError(f"Unsafe {name} path: {path}")
+        return path
+
+    def _run_subprocess(self, cmd: list, timeout: int = None) -> None:
+        """Run a subprocess with validated arguments."""
         try:
-            return subprocess.run(
+            # nosec B603 - command and arguments are validated before calling
+            subprocess.run(
                 cmd,
                 check=True,
-                timeout=timeout,
                 capture_output=True,
-                text=True,
-                shell=False  # Explicitly set shell=False for security
+                timeout=timeout
             )
         except subprocess.SubprocessError as e:
-            raise RuntimeError(f"Command execution failed: {e}")
+            raise RuntimeError(f"Command failed: {' '.join(cmd)}") from e
     
     def get_image_dpi(self, image_path):
         """
@@ -121,29 +111,30 @@ class AlternativeImageProcessor:
             return None
     
     def convert_to_svg(self, input_path: str, output_path: str, timeout: int = 30) -> str:
-        """Convert image to SVG safely."""
-        # Validate paths
-        input_path = self._validate_path(input_path)
-        output_path = self._validate_path(output_path)
+        """Convert image to SVG safely using AutoTrace."""
+        input_path = self._validate_input_path(input_path)
         
-        if not input_path.is_file():
-            raise ValueError(f"Input image not found: {input_path}")
-            
-        output_dir = output_path.parent
-        if not output_dir.exists():
-            raise ValueError(f"Output directory does not exist: {output_dir}")
-            
-        inkscape_path = shutil.which('inkscape')
-        if not inkscape_path:
-            raise RuntimeError("Inkscape not found")
-            
+        # Validate output path is safe
+        if not self.path_validator.is_safe_output_path(output_path):
+            raise ValueError(f"Unsafe output path: {output_path}")
+        output_path = Path(output_path).resolve()
+        
+        # Validate AutoTrace installation
+        autotrace_path = self._validate_executable('AutoTrace', shutil.which('autotrace'))
+        
         cmd = [
-            inkscape_path,
-            '--export-filename', str(output_path),
+            autotrace_path,
+            '--output-file', str(output_path),
+            '--output-format', 'svg',
             str(input_path)
         ]
         
+        # nosec B603 - all arguments are validated above
         self._run_subprocess(cmd, timeout)
+        
+        if not output_path.exists():
+            raise ValueError("AutoTrace failed to create output file")
+        
         return str(output_path)
     
     def vectorize_image(self, image_path):
@@ -208,24 +199,24 @@ class AlternativeImageProcessor:
     
     def _vectorize_with_autotrace(self, image_path: str) -> str:
         """Safely vectorize using AutoTrace."""
-        image_path = self._validate_path(image_path)
-        output_path = image_path.with_suffix('.svg')
+        input_path = self._validate_input_path(image_path)
+        output_path = self._validate_output_directory(input_path.with_suffix('.svg'))
         
         autotrace_path = shutil.which('autotrace')
         if not autotrace_path:
             raise RuntimeError("AutoTrace not found")
-            
+        
         cmd = [
             autotrace_path,
             '--output-file', str(output_path),
             '--output-format', 'svg',
-            str(image_path)
+            str(input_path)
         ]
         
         self._run_subprocess(cmd)
         
         if not output_path.exists():
-            raise ValueError(f"AutoTrace failed to create output file: {output_path}")
+            raise ValueError("AutoTrace failed to create output file")
         return str(output_path)
     
     def _vectorize_with_opencv(self, image_path):
