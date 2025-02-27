@@ -1,9 +1,11 @@
+import os
+
 class SchematicProcessor:
     def __init__(self):
         self.flux_sync = FluxWebSync(FluxSyncConfig(
-            api_endpoint="https://app.flux.ai/api",
-            project_id="your_project_id",
-            auth_token="your_auth_token"
+            api_endpoint=os.getenv('FLUX_API_ENDPOINT', 'https://app.flux.ai/api'),
+            project_id=os.getenv('FLUX_PROJECT_ID'),
+            auth_token=os.getenv('FLUX_AUTH_TOKEN')
         ))
         self.stackup_manager = StackupManager()
         self.auto_router = AutoRouter()

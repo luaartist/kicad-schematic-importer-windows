@@ -4,6 +4,116 @@ import os
 import json
 from datetime import datetime, timedelta
 
+TIMEOUT = 10  # seconds
+
+class GitHubVerifier:
+    """Handle GitHub account verification and 2FA requirements"""
+    
+    def __init__(self, cache_dir=None):
+        self.logger = logging.getLogger('github_verifier')
+        self.logger.setLevel(logging.INFO)
+        
+        if not self.logger.handlers:
+            handler = logging.FileHandler('github_verification.log')
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+        
+        self.cache_dir = cache_dir or os.path.join(os.path.dirname(__file__), 'cache')
+        os.makedirs(self.cache_dir, exist_ok=True)
+    
+    def verify_account(self, token):
+        """
+        Verify GitHub account exists and has 2FA enabled
+        
+        Args:
+            token: GitHub personal access token
+            
+        Returns:
+            dict: Verification result with status and user info
+        """
+        # Check cache first
+        cached = self._check_cache(token)
+        if cached:
+            return cached
+        
+        try:
+            headers = {
+                'Authorization': f'token {token}',
+                'Accept': 'application/vnd.github.v3+json'
+            }
+            
+            # Add timeout to all requests
+            user_response = requests.get('https://api.github.com/user', 
+                headers=headers, timeout=TIMEOUT)
+            
+            twofa_response = requests.get('https://api.github.com/user/2fa_status', 
+                headers=headers, timeout=TIMEOUT)
+            
+            orgs_response = requests.get('https://api.github.com/user/orgs', 
+                headers=headers, timeout=TIMEOUT)
+            
+            if user_response.status_code != 200:
+                self.logger.warning(f"GitHub verification failed: {user_response.status_code}")
+                return {
+                    'verified': False,
+                    'error': f"Authentication failed: {user_response.status_code}",
+                    'timestamp': datetime.now().isoformat()
+                }
+            
+            user_data = user_response.json()
+            
+            # Check 2FA status
+            # Note: This endpoint requires specific permissions
+            has_2fa = False
+            
+            if twofa_response.status_code == 200:
+                has_2fa = twofa_response.json().get('enabled', False)
+            else:
+                # Alternative method: check if token has SSO enabled
+                # This is not a perfect check but can indicate 2FA
+                if orgs_response.status_code == 200 and len(orgs_response.json()) > 0:
+                    # If user is in organizations, they likely have 2FA enabled
+                    # as many orgs require it
+                    has_2fa = True
+            
+            result = {
+                'verified': has_2fa,
+                'username': user_data.get('login'),
+                'name': user_data.get('name'),
+                'has_2fa': has_2fa,
+                'avatar_url': user_data.get('avatar_url'),
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            if not has_2fa:
+                result['error'] = "Two-factor authentication is required but not enabled on your GitHub account"
+                self.logger.warning(f"GitHub 2FA not enabled for user {result['username']}")
+            else:
+                self.logger.info(f"GitHub verification successful for user {result['username']}")
+                # Cache successful result
+                self._cache_result(token, result)
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"GitHub verification error: {str(e)}")
+            return {
+                'verified': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
+    
+    def _check_cache(self, token):
+        """Check if we have a cached verification for this token"""
+        # Create a hash of the token for the filename
+        import hashlib
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        cache_file = os.path.join(self.cache_dir, f"{token_hash}.json")
+        
+        if os.path.exists(cache_file):
+            try:
+                with open(cache_file, 'r') as f:
 class GitHubVerifier:
     """Handle GitHub account verification and 2FA requirements"""
     

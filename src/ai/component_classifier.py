@@ -425,7 +425,7 @@ def share_unidentified_component(self, image_data, github_token, description=Non
                 return None
         
         # Create a unique identifier for the image
-        img_hash = hashlib.md5(image_data.tobytes()).hexdigest()
+        img_hash = hashlib.sha256(image_data.tobytes()).hexdigest()
         timestamp = int(time.time())
         filename = f"test_unidentified_component_{img_hash}_{timestamp}.jpg"
         
