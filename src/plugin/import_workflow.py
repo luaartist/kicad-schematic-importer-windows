@@ -1,3 +1,16 @@
+# Handle cv2 import with try-except to avoid errors when OpenCV is not installed
+try:
+    import cv2
+    CV2_AVAILABLE = True
+except ImportError:
+    CV2_AVAILABLE = False
+    # Create dummy module for type checking
+    class CV2Dummy:
+        def imread(self, path):
+            return None
+    
+    cv2 = CV2Dummy()
+
 class SchematicImportWorkflow:
     async def process_image(self, image_path: str):
         # 1. Image preprocessing
@@ -22,7 +35,13 @@ class SchematicImportWorkflow:
         """Image enhancement and preparation"""
         image = cv2.imread(image_path)
         # Apply filters and enhancements
+        processed_image = self.apply_filters(image)
         return processed_image
+        
+    def apply_filters(self, image):
+        """Apply image processing filters"""
+        # Implementation
+        return image
 
     async def detect_components(self, image):
         """Component detection with FLUX.AI integration"""

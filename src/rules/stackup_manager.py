@@ -1,3 +1,5 @@
+from typing import List, Dict
+
 class StackupManager:
     def __init__(self):
         self.current_stackup = None

@@ -1,3 +1,18 @@
+# Define missing classes
+class DRCChecker:
+    async def check_realtime(self, trace):
+        # Implementation
+        pass
+
+class GroundPlaneManager:
+    async def adjust_planes(self, trace):
+        # Implementation
+        pass
+    
+    async def create_or_update_plane(self, portal):
+        # Implementation
+        pass
+
 class AutoRouter:
     def __init__(self):
         self.drc_checker = DRCChecker()

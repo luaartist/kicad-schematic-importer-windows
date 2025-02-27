@@ -1,3 +1,27 @@
+from typing import List, Dict
+from src.recognition.component_tagger import Component
+
+# Define analyzer classes
+class SafetyAnalyzer:
+    async def analyze(self, component):
+        # Implementation
+        pass
+
+class PartUpgradeAnalyzer:
+    async def analyze(self, component):
+        # Implementation
+        pass
+
+class CompatibilityChecker:
+    async def analyze(self, component):
+        # Implementation
+        pass
+
+class SmartFeatureRecommender:
+    async def recommend(self, component):
+        # Implementation
+        pass
+
 class EnhancedImportPipeline:
     async def initialize_import_workflow(self):
         """Enhanced import workflow with modern features"""

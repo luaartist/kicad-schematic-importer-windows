@@ -1,6 +1,27 @@
-import FreeCAD
-import Part
-from FreeCAD import Base
+# Handle FreeCAD imports with try-except to avoid errors when FreeCAD is not installed
+try:
+    import FreeCAD
+    import Part
+    from FreeCAD import Base
+    FREECAD_AVAILABLE = True
+except ImportError:
+    FREECAD_AVAILABLE = False
+    # Create dummy classes/modules for type checking
+    class FreeCADDummy:
+        def newDocument(self):
+            pass
+    
+    class BaseDummy:
+        pass
+    
+    class PartDummy:
+        pass
+    
+    FreeCAD = FreeCADDummy()
+    Part = PartDummy()
+    Base = BaseDummy()
+
+from src.viewproviders.view_base import ViewProviderComponent
 
 class PCBModelGenerator:
     def __init__(self):

@@ -1,3 +1,5 @@
+from src.recognition.component_tagger import Component
+
 class ComponentAnalyzer:
     async def analyze_track_requirements(self, component: Component):
         """Analyze and recommend track specifications"""

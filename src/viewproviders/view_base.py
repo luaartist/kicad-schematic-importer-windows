@@ -1,7 +1,21 @@
 """Base view provider for KiCad schematic components."""
 
-import FreeCAD
-import FreeCADGui
+# Handle FreeCAD imports with try-except to avoid errors when FreeCAD is not installed
+try:
+    import FreeCAD
+    import FreeCADGui
+    FREECAD_AVAILABLE = True
+except ImportError:
+    FREECAD_AVAILABLE = False
+    # Create dummy classes/modules for type checking
+    class FreeCADDummy:
+        pass
+    
+    class FreeCADGuiDummy:
+        pass
+    
+    FreeCAD = FreeCADDummy()
+    FreeCADGui = FreeCADGuiDummy()
 
 class ViewProviderComponent:
     """Base view provider for KiCad schematic components."""
