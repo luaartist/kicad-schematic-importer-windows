@@ -1,0 +1,6 @@
+[tool.bandit]
+exclude_dirs = ["tests", "docs"]
+skips = ["B101"]  # Skip assert statements warning
+
+[tool.safety]
+ignore_vulnerabilities = []
