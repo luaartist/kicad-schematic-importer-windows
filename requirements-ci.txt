@@ -1,11 +1,15 @@
-# Core dependencies
-opencv-python>=4.5.0
-numpy>=1.20.0
-pillow>=8.0.0
-python-potrace>=1.0.0
-
-# Testing dependencies
+# CI-specific dependencies
 pytest>=7.1.2
 pytest-cov>=4.1.0
 flake8>=7.1.2
 coverage>=7.3.2
+
+# Core dependencies
+opencv-python>=4.5.0
+numpy>=1.20.0
+pillow>=8.0.0
+svgpathtools>=1.5.0
+
+# Build dependencies
+setuptools>=65.0.0
+wheel>=0.37.0

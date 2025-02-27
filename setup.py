@@ -10,6 +10,7 @@ setup(
         "numpy>=1.20.0",
         "pillow>=8.0.0",
         "skidl>=1.0.0",
+        "svgpathtools>=1.5.0",
         # python-potrace is optional
     ],
 )
