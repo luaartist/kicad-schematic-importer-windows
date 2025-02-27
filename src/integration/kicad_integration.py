@@ -1,6 +1,5 @@
-import pcbnew
+from .kicad_python_wrapper import KicadPythonWrapper
 import os
-import sys
 import cv2
 import numpy as np
 from skidl import *
@@ -11,18 +10,28 @@ class KiCadSchematicGenerator:
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         
-        # Initialize KiCad project
-        self.board = pcbnew.BOARD()
-        self.schematic = None  # Will be initialized when needed
+        # Initialize KiCad integration
+        self.kicad = KicadPythonWrapper()
         
-        # Component library
-        self.component_templates = {
-            'resistor': {'pins': 2, 'footprint': 'Resistor_SMD:R_0805_2012Metric'},
-            'capacitor': {'pins': 2, 'footprint': 'Capacitor_SMD:C_0805_2012Metric'},
-            'ic': {'pins': 8, 'footprint': 'Package_SO:SOIC-8_3.9x4.9mm_P1.27mm'},
-            'connector': {'pins': 4, 'footprint': 'Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical'}
-        }
-    
+        # Check KiCad version and initialize modules
+        print(f"KiCad Version: {self.kicad.kicad_version}")
+        print(f"KiCad 9+ Compatible: {self.kicad.is_kicad9}")
+        
+        modules = self.kicad.import_kicad_modules()
+        self.pcbnew = modules.get('pcbnew')
+        
+        if not self.pcbnew:
+            raise ImportError("Failed to initialize KiCad integration")
+
+    def load_project(self, project_path: str) -> bool:
+        """Load and synchronize with a KiCad project"""
+        if not self.kicad.sync_project(project_path):
+            print("Failed to synchronize with KiCad project")
+            return False
+        
+        self.board = self.kicad.get_board()
+        return True
+
     def detect_components_from_image(self, image_path):
         """Detect components from schematic image and create KiCad components"""
         print(f"Processing image: {image_path}")
@@ -201,11 +210,21 @@ def main():
     parser = argparse.ArgumentParser(description='Process schematic image and create KiCad project')
     parser.add_argument('--image', type=str, required=True, help='Path to schematic image')
     parser.add_argument('--output', type=str, default='kicad_output', help='Output directory')
+    parser.add_argument('--project', type=str, help='Path to existing KiCad project (optional)')
     args = parser.parse_args()
     
     try:
         # Initialize KiCad generator
         generator = KiCadSchematicGenerator(args.output)
+        
+        # Load existing project if specified
+        if args.project:
+            print("Loading KiCad project...")
+            if generator.load_project(args.project):
+                print("Successfully synchronized with KiCad project")
+            else:
+                print("Failed to load KiCad project")
+                return
         
         # Detect components
         print("Detecting components...")
