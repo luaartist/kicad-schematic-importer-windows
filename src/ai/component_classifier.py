@@ -54,13 +54,13 @@ class ComponentClassifier:
             }
             
             # Get user info
-            response = requests.get('https://api.github.com/user', headers=headers)
+            response = requests.get('https://api.github.com/user', headers=headers, timeout=10)
             if response.status_code != 200:
                 self.logger.warning(f"GitHub verification failed: {response.status_code}")
                 return False
             
             # Check 2FA status - requires specific endpoint
-            response = requests.get('https://api.github.com/user/2fa_status', headers=headers)
+            response = requests.get('https://api.github.com/user/2fa_status', headers=headers, timeout=10)
             if response.status_code != 200 or not response.json().get('enabled', False):
                 self.logger.warning("GitHub 2FA not enabled")
                 return False
@@ -72,59 +72,59 @@ class ComponentClassifier:
             self.logger.error(f"GitHub verification error: {str(e)}")
             return False
     
-def show_liability_disclaimer(self):
-    """
-    Display liability disclaimer and get user acknowledgment
-    This would typically be implemented in the UI layer, but we include the text here
-    """
-    disclaimer = """
-    IMPORTANT SAFETY AND LIABILITY DISCLAIMER - TEST VERSION
-    
-    By using this component classification feature in this TEST VERSION, you acknowledge and agree to the following:
-    
-    1. TEST ENVIRONMENT ONLY: This software is currently in a testing phase and should only be used
-    in controlled test environments with designated test equipment.
-    
-    2. ACCURACY LIMITATIONS: The AI classification system provides estimates based on visual data only.
-    Components with unreadable or damaged markings may be misidentified.
-    
-    3. VERIFICATION REQUIREMENT: You MUST verify all component identifications using appropriate
-    test equipment (multimeters, oscilloscopes, etc.) before using in any circuit.
-    
-    4. NO LIABILITY: Neither the developers, contributors, nor any affiliated parties shall be
-    liable for any damages, injuries, or losses resulting from the use of this software or
-    any component identifications it provides.
-    
-    5. ELECTRICAL SAFETY RISKS: Incorrect component identification or replacement can result in:
-       - Electrical fires
-       - Component damage
-       - Circuit malfunction
-       - Personal injury
-       - Property damage
-    
-    6. PROFESSIONAL REVIEW: For critical applications, safety systems, or commercial products,
-    all schematics should be reviewed by a qualified electrical engineer.
-    
-    7. DATA SHARING: When you share schematics or request community assistance, you agree that:
-       - Your schematic data may be stored on third-party servers
-       - Community members may provide suggestions that require verification
-       - You remain solely responsible for validating any advice received
-    
-    8. COMPONENT REPLACEMENT RISKS: There is approximately a 90% chance of damaging PCB traces 
-    when removing components, especially with improper tools or techniques. You accept full 
-    responsibility for any damage to your test equipment.
-    
-    9. TEST DOCUMENTATION: You agree to document all testing procedures and results for future reference
-    and potential contribution to improving this software.
-    
-    USE AT YOUR OWN RISK. If you do not agree to these terms, do not use this feature.
-    """
-    
-    # In a real implementation, this would show a dialog and get user confirmation
-    # For now, we'll just log it and return True
-    self.logger.info("Liability disclaimer shown to user")
-    self.user_acknowledged_risks = True
-    return disclaimer
+    def show_liability_disclaimer(self):
+        """
+        Display liability disclaimer and get user acknowledgment
+        This would typically be implemented in the UI layer, but we include the text here
+        """
+        disclaimer = """
+        IMPORTANT SAFETY AND LIABILITY DISCLAIMER - TEST VERSION
+        
+        By using this component classification feature in this TEST VERSION, you acknowledge and agree to the following:
+        
+        1. TEST ENVIRONMENT ONLY: This software is currently in a testing phase and should only be used
+        in controlled test environments with designated test equipment.
+        
+        2. ACCURACY LIMITATIONS: The AI classification system provides estimates based on visual data only.
+        Components with unreadable or damaged markings may be misidentified.
+        
+        3. VERIFICATION REQUIREMENT: You MUST verify all component identifications using appropriate
+        test equipment (multimeters, oscilloscopes, etc.) before using in any circuit.
+        
+        4. NO LIABILITY: Neither the developers, contributors, nor any affiliated parties shall be
+        liable for any damages, injuries, or losses resulting from the use of this software or
+        any component identifications it provides.
+        
+        5. ELECTRICAL SAFETY RISKS: Incorrect component identification or replacement can result in:
+           - Electrical fires
+           - Component damage
+           - Circuit malfunction
+           - Personal injury
+           - Property damage
+        
+        6. PROFESSIONAL REVIEW: For critical applications, safety systems, or commercial products,
+        all schematics should be reviewed by a qualified electrical engineer.
+        
+        7. DATA SHARING: When you share schematics or request community assistance, you agree that:
+           - Your schematic data may be stored on third-party servers
+           - Community members may provide suggestions that require verification
+           - You remain solely responsible for validating any advice received
+        
+        8. COMPONENT REPLACEMENT RISKS: There is approximately a 90% chance of damaging PCB traces 
+        when removing components, especially with improper tools or techniques. You accept full 
+        responsibility for any damage to your test equipment.
+        
+        9. TEST DOCUMENTATION: You agree to document all testing procedures and results for future reference
+        and potential contribution to improving this software.
+        
+        USE AT YOUR OWN RISK. If you do not agree to these terms, do not use this feature.
+        """
+        
+        # In a real implementation, this would show a dialog and get user confirmation
+        # For now, we'll just log it and return True
+        self.logger.info("Liability disclaimer shown to user")
+        self.user_acknowledged_risks = True
+        return disclaimer
     
     def show_replacement_disclaimer(self):
         """
@@ -407,49 +407,49 @@ def show_liability_disclaimer(self):
                 'replacement_disclaimer': 'Component replacement carries a 90% risk of PCB trace damage. See the full disclaimer for details.'
             }
     
-def share_unidentified_component(self, image_data, github_token, description=None):
-    """
-    Share unidentified component with the community via GitHub
-    
-    Args:
-        image_data: Image of the unidentified component
-        github_token: GitHub authentication token
-        description: Optional description of the component
+    def share_unidentified_component(self, image_data, github_token, description=None):
+        """
+        Share unidentified component with the community via GitHub
         
-    Returns:
-        str: URL to the GitHub issue or None if failed
-    """
-    try:
-        if not self.github_verification_complete:
-            if not self.verify_github_account(github_token):
-                return None
+        Args:
+            image_data: Image of the unidentified component
+            github_token: GitHub authentication token
+            description: Optional description of the component
         
-        # Create a unique identifier for the image
-        img_hash = hashlib.sha256(image_data.tobytes()).hexdigest()
-        timestamp = int(time.time())
-        filename = f"test_unidentified_component_{img_hash}_{timestamp}.jpg"
+        Returns:
+            str: URL to the GitHub issue or None if failed
+        """
+        try:
+            if not self.github_verification_complete:
+                if not self.verify_github_account(github_token):
+                    return None
         
-        # Save image to temp file
-        temp_path = os.path.join(os.path.dirname(__file__), 'temp', filename)
-        os.makedirs(os.path.dirname(temp_path), exist_ok=True)
-        cv2.imwrite(temp_path, image_data)
+            # Create a unique identifier for the image
+            img_hash = hashlib.sha256(image_data.tobytes()).hexdigest()
+            timestamp = int(time.time())
+            filename = f"test_unidentified_component_{img_hash}_{timestamp}.jpg"
         
-        # Upload to GitHub as a gist or issue
-        # This would be implemented with GitHub API
-        # For now, return a placeholder
+            # Save image to temp file
+            temp_path = os.path.join(os.path.dirname(__file__), 'temp', filename)
+            os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+            cv2.imwrite(temp_path, image_data)
         
-        issue_url = f"https://github.com/your-org/kicad-schematic-importer/issues/new?title=TEST+VERSION+-+Unidentified+Component+{img_hash}"
+            # Upload to GitHub as a gist or issue
+            # This would be implemented with GitHub API
+            # For now, return a placeholder
         
-        self.logger.info(f"Shared unidentified component (TEST VERSION): {issue_url}")
+            issue_url = f"https://github.com/your-org/kicad-schematic-importer/issues/new?title=TEST+VERSION+-+Unidentified+Component+{img_hash}"
         
-        return {
-            'url': issue_url,
-            'image_path': temp_path,
-            'timestamp': datetime.now().isoformat(),
-            'test_version': True,
-            'disclaimer': "TEST VERSION NOTICE: This is a test version of the component sharing feature. Remember that community identifications must be verified with appropriate test equipment. Component replacement carries a 90% risk of PCB trace damage. All shared data should be considered test data only."
-        }
+            self.logger.info(f"Shared unidentified component (TEST VERSION): {issue_url}")
         
-    except Exception as e:
-        self.logger.error(f"Error sharing unidentified component (TEST VERSION): {str(e)}")
-        return None
+            return {
+                'url': issue_url,
+                'image_path': temp_path,
+                'timestamp': datetime.now().isoformat(),
+                'test_version': True,
+                'disclaimer': "TEST VERSION NOTICE: This is a test version of the component sharing feature. Remember that community identifications must be verified with appropriate test equipment. Component replacement carries a 90% risk of PCB trace damage. All shared data should be considered test data only."
+            }
+        
+        except Exception as e:
+            self.logger.error(f"Error sharing unidentified component (TEST VERSION): {str(e)}")
+            return None
