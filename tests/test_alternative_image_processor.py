@@ -86,57 +86,44 @@ class TestAlternativeImageProcessor:
     
     @patch('shutil.which')
     @patch('subprocess.run')
-    @patch('pathlib.Path.exists')
-    def test_convert_to_svg(self, mock_exists, mock_run, mock_which, image_processor, test_image_path, temp_dir):
+    def test_convert_to_svg(self, mock_run, mock_which, image_processor, test_image_path, temp_dir):
         """Test converting an image to SVG"""
         mock_which.return_value = 'C:\\Program Files\\Inkscape\\bin\\inkscape.exe'
         mock_run.return_value = MagicMock(returncode=0)
         
-        # Mock Path.exists to return True for all paths
-        mock_exists.return_value = True
-        
-        output_path = os.path.join(temp_dir, 'output.svg')
-        result = image_processor.convert_to_svg(test_image_path, output_path)
-        
-        assert normalize_path(result) == normalize_path(output_path)
+        # Patch Path.exists to always return True
+        with patch.object(Path, 'exists', return_value=True):
+            output_path = os.path.join(temp_dir, 'output.svg')
+            result = image_processor.convert_to_svg(test_image_path, output_path)
+            
+            assert normalize_path(result) == normalize_path(output_path)
         
         # Test with non-existent input file
-        mock_exists.reset_mock()
-        mock_exists.side_effect = None
-        
-        # Create a new mock for Path.exists that returns False for the input file
-        def mock_exists_side_effect(path_obj):
-            path_str = str(path_obj)
-            return 'nonexistent.png' not in path_str
-        
-        mock_exists.side_effect = mock_exists_side_effect
-        
-        with pytest.raises(ValueError) as excinfo:
-            image_processor.convert_to_svg('nonexistent.png', output_path)
-        assert "Input file not found" in str(excinfo.value)
-        
-        # Reset mock
-        mock_exists.reset_mock()
-        mock_exists.side_effect = None
-        mock_exists.return_value = True
+        with patch.object(Path, 'exists', side_effect=lambda p: 'nonexistent.png' not in str(p)):
+            with pytest.raises(ValueError) as excinfo:
+                image_processor.convert_to_svg('nonexistent.png', output_path)
+            assert "Input file not found" in str(excinfo.value)
         
         # Test with non-existent output directory
-        with pytest.raises(ValueError) as excinfo:
-            image_processor.convert_to_svg(test_image_path, '/nonexistent/dir/output.svg')
-        assert "Output directory does not exist" in str(excinfo.value)
+        with patch.object(Path, 'exists', side_effect=lambda p: not str(p).endswith('nonexistent')):
+            with pytest.raises(ValueError) as excinfo:
+                image_processor.convert_to_svg(test_image_path, '/nonexistent/dir/output.svg')
+            assert "Output directory does not exist" in str(excinfo.value)
         
         # Test with Inkscape not found
         mock_which.return_value = None
-        with pytest.raises(RuntimeError) as excinfo:
-            image_processor.convert_to_svg(test_image_path, output_path)
-        assert "Inkscape not found" in str(excinfo.value)
+        with patch.object(Path, 'exists', return_value=True):
+            with pytest.raises(RuntimeError) as excinfo:
+                image_processor.convert_to_svg(test_image_path, output_path)
+            assert "Inkscape not found" in str(excinfo.value)
         
         # Test with timeout
         mock_which.return_value = '/usr/bin/inkscape'
         mock_run.side_effect = subprocess.TimeoutExpired(cmd='inkscape', timeout=30)
-        with pytest.raises(TimeoutError) as excinfo:
-            image_processor.convert_to_svg(test_image_path, output_path)
-        assert "SVG conversion timed out" in str(excinfo.value)
+        with patch.object(Path, 'exists', return_value=True):
+            with pytest.raises(TimeoutError) as excinfo:
+                image_processor.convert_to_svg(test_image_path, output_path)
+            assert "SVG conversion timed out" in str(excinfo.value)
     
     @patch.object(AlternativeImageProcessor, '_vectorize_with_inkscape')
     @patch.object(AlternativeImageProcessor, '_vectorize_with_autotrace')
@@ -208,75 +195,50 @@ class TestAlternativeImageProcessor:
     
     @patch('shutil.which')
     @patch('subprocess.run')
-    @patch('pathlib.Path.exists')
-    def test_vectorize_with_inkscape(self, mock_exists, mock_run, mock_which, image_processor, test_image_path):
+    def test_vectorize_with_inkscape(self, mock_run, mock_which, image_processor, test_image_path):
         """Test vectorizing with Inkscape"""
         # Mock the methods
         mock_which.return_value = 'C:\\Program Files\\Inkscape\\bin\\inkscape.exe'
         mock_run.return_value = MagicMock(returncode=0)
         
-        # Set up exists() to return True for all paths initially
-        mock_exists.return_value = True
-        
         vector_path = test_image_path.replace('.png', '.svg')
         
         # Test successful conversion
-        result = image_processor._vectorize_with_inkscape(test_image_path)
-        assert normalize_path(result) == normalize_path(vector_path)
+        with patch.object(Path, 'exists', return_value=True):
+            result = image_processor._vectorize_with_inkscape(test_image_path)
+            assert normalize_path(result) == normalize_path(vector_path)
         
         # Test output file not created
-        mock_exists.reset_mock()
-        mock_exists.side_effect = None
-        
-        # Create a new mock for Path.exists that returns False for the output file
-        def mock_exists_side_effect(path_obj):
-            path_str = str(path_obj)
-            if '.svg' in path_str:  # Output file
-                return False
-            return True
-        
-        mock_exists.side_effect = mock_exists_side_effect
-        
-        with pytest.raises(ValueError) as excinfo:
-            image_processor._vectorize_with_inkscape(test_image_path)
-        assert "Inkscape failed to create output file" in str(excinfo.value)
+        with patch.object(Path, 'exists', side_effect=lambda p: '.svg' not in str(p)):
+            with pytest.raises(ValueError) as excinfo:
+                image_processor._vectorize_with_inkscape(test_image_path)
+            assert "Inkscape failed to create output file" in str(excinfo.value)
     
     @patch('shutil.which')
     @patch('subprocess.run')
-    @patch('pathlib.Path.exists')
-    def test_vectorize_with_autotrace(self, mock_exists, mock_run, mock_which, image_processor, test_image_path):
+    def test_vectorize_with_autotrace(self, mock_run, mock_which, image_processor, test_image_path):
         """Test vectorizing with AutoTrace"""
         # Mock the methods
         mock_which.return_value = 'C:\\Program Files\\AutoTrace\\autotrace.exe'
         mock_run.return_value = MagicMock(returncode=0)
         
-        # Set up exists() to return True for all paths initially
-        mock_exists.return_value = True
-        
         vector_path = test_image_path.replace('.png', '.svg')
-        result = image_processor._vectorize_with_autotrace(test_image_path)
         
-        assert normalize_path(result) == normalize_path(vector_path)
-        mock_which.assert_called_once_with('autotrace')
-        mock_run.assert_called_once()
+        # Test successful conversion
+        with patch.object(Path, 'exists', return_value=True):
+            result = image_processor._vectorize_with_autotrace(test_image_path)
+            assert normalize_path(result) == normalize_path(vector_path)
+            mock_which.assert_called_once_with('autotrace')
+            mock_run.assert_called_once()
         
         # Reset mocks
         mock_run.reset_mock()
-        mock_exists.reset_mock()
-        mock_exists.side_effect = None
         
-        # Create a new mock for Path.exists that returns False for the output file
-        def mock_exists_side_effect(path_obj):
-            path_str = str(path_obj)
-            if '.svg' in path_str:  # Output file
-                return False
-            return True
-        
-        mock_exists.side_effect = mock_exists_side_effect
-        
-        with pytest.raises(ValueError) as excinfo:
-            image_processor._vectorize_with_autotrace(test_image_path)
-        assert "AutoTrace failed to create output file" in str(excinfo.value)
+        # Test with output file not created
+        with patch.object(Path, 'exists', side_effect=lambda p: '.svg' not in str(p)):
+            with pytest.raises(ValueError) as excinfo:
+                image_processor._vectorize_with_autotrace(test_image_path)
+            assert "AutoTrace failed to create output file" in str(excinfo.value)
     
     @patch('cv2.imread')
     @patch('cv2.cvtColor')
