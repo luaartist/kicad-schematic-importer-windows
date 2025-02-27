@@ -1,0 +1,11 @@
+name: schematic_converter
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - opencv
+  - numpy
+  - pillow
+  - pip
+  - pip:
+    - python-potrace

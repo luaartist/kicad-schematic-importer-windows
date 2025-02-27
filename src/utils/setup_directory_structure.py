@@ -6,85 +6,122 @@ Run this from the root of your repository.
 
 import os
 import shutil
-from pathlib import Path
 
-def create_directory(path):
-    """Create directory if it doesn't exist"""
-    if not os.path.exists(path):
-        os.makedirs(path)
-        print(f"Created directory: {path}")
+def setup_test_repository():
+    """Set up the complete repository structure for testing"""
+    
+    # Core directories
+    directories = [
+        "src",
+        "src/core",
+        "src/ui",
+        "src/utils",
+        "src/ai",
+        "src/integration",
+        "src/plugin",
+        "tests",
+        "tests/unit",
+        "tests/integration",
+        "tests/data",
+        "tests/ref_layouts",
+        "resources",
+        "resources/icons",
+        "resources/templates",
+        "docs",
+        ".github/workflows",
+        ".github/ISSUE_TEMPLATE"
+    ]
 
-def create_empty_file(path):
-    """Create an empty file if it doesn't exist"""
-    if not os.path.exists(path):
-        with open(path, 'w') as f:
-            pass
-        print(f"Created empty file: {path}")
+    # Create directories
+    for directory in directories:
+        os.makedirs(directory, exist_ok=True)
+        if directory.startswith(("src", "tests")):
+            with open(os.path.join(directory, "__init__.py"), "w") as f:
+                pass
 
-def create_init_file(path):
-    """Create an __init__.py file in the directory"""
-    init_path = os.path.join(path, "__init__.py")
-    if not os.path.exists(init_path):
-        with open(init_path, 'w') as f:
-            f.write("# This file is part of the KiCad Schematic Importer plugin\n")
-        print(f"Created __init__.py: {init_path}")
+    # Essential files
+    essential_files = {
+        "requirements.txt": "",
+        "requirements-dev.txt": "",
+        ".gitignore": """
+*.pyc
+__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+.env
+.venv/
+""",
+        ".github/workflows/ci.yml": """
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Run tests
+        run: pytest
+""",
+        "tests/conftest.py": """
+import pytest
+import os
+import sys
 
-# Define the directory structure
-directories = [
-    "src",
-    "src/core",
-    "src/ui",
-    "src/utils",
-    "src/ai",
-    "src/integration",
-    "resources",
-    "resources/icons",
-    "resources/templates",
-    "security",
-    "security/templates",
-    "tests",
-    "docs",
-    ".github",
-    ".github/workflows",
-    ".github/ISSUE_TEMPLATE",
-]
+# Add src to path for testing
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+""",
+        "setup.py": """
+from setuptools import setup, find_packages
 
-# Create the directory structure
-for directory in directories:
-    create_directory(directory)
-    if directory.startswith("src") or directory == "tests":
-        create_init_file(directory)
+setup(
+    name="kicad-schematic-importer",
+    version="0.1.0",
+    packages=find_packages(),
+    install_requires=[
+        # Add your dependencies
+    ],
+)
+"""
+    }
 
-# Create essential files if they don't exist
-essential_files = [
-    "requirements.txt",
-    ".gitignore",
-    "setup.py",
-    "install.py",
-    ".github/workflows/ci.yml",
-    ".github/workflows/release.yml",
-    ".github/PULL_REQUEST_TEMPLATE.md",
-    ".github/ISSUE_TEMPLATE/bug_report.md",
-    ".github/ISSUE_TEMPLATE/feature_request.md",
-]
+    # Create essential files
+    for file_path, content in essential_files.items():
+        dir_path = os.path.dirname(file_path)
+        if dir_path:  # Only create directory if path is not empty
+            os.makedirs(dir_path, exist_ok=True)
+        with open(file_path, "w") as f:
+            f.write(content)
 
-for file_path in essential_files:
-    create_empty_file(file_path)
+    # Move reference layouts
+    ref_layouts_sources = [
+        "kicad-python/tests/geometry/7.0/ref_layouts",
+        "kicad-python/tests/geometry/8.0/ref_layouts",
+        "kicad-python/tests/geometry/9.0/ref_layouts"
+    ]
+    
+    for source in ref_layouts_sources:
+        if os.path.exists(source):
+            version = source.split("/")[3]
+            dest = f"tests/ref_layouts/{version}"
+            shutil.copytree(source, dest, dirs_exist_ok=True)
 
-# Move existing files to their proper locations
-file_moves = [
-    # Add your file moves here, for example:
-    # ("existing_file.py", "new/location/file.py"),
-]
+    print("Repository structure set up successfully!")
+    print("\nNext steps:")
+    print("1. Initialize git repository: git init")
+    print("2. Make initial commit: git add . && git commit -m 'Initial commit'")
+    print("3. Add remote repository and push")
 
-for source, destination in file_moves:
-    if os.path.exists(source) and not os.path.exists(destination):
-        os.makedirs(os.path.dirname(destination), exist_ok=True)
-        shutil.move(source, destination)
-        print(f"Moved {source} to {destination}")
-
-print("\nDirectory structure setup complete!")
-print("Next steps:")
-print("1. Add content to the empty files")
-print("2. Implement core functionality")
-print("3. Add documentation")
+if __name__ == "__main__":
+    setup_test_repository()  # Call the main function
