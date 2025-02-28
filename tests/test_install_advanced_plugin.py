@@ -2,7 +2,7 @@ import os
 import pytest
 import platform
 from pathlib import Path
-from install_advanced_plugin import find_kicad_plugin_dir, install_dependencies
+from install_advanced_plugin_fixed_v2 import find_kicad_plugin_dir, install_dependencies
 
 def test_find_kicad_plugin_dir():
     """Test finding KiCad plugin directory"""
