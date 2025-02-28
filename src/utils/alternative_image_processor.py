@@ -1,328 +1,158 @@
-#!/usr/bin/env python3
-"""
-Alternative Image Processor module for vectorizing images.
-This module provides alternatives to the potrace library for vectorization.
-"""
-
-import os
-import shutil
-import subprocess  # nosec B404 - subprocess usage is validated
-import tempfile
-from pathlib import Path
 import cv2
 import numpy as np
-from svgpathtools import Path as SvgPath, Line, CubicBezier, QuadraticBezier
-import svgwrite
-from typing import List, Optional
-import shlex
-from .path_validator import PathValidator
+from PIL import Image
+import os
+import logging
 
 class AlternativeImageProcessor:
-    """
-    Alternative Image Processor class that provides methods for vectorizing images
-    using various libraries and tools.
-    """
+    """Class for processing and vectorizing schematic images"""
     
     def __init__(self):
-        """Initialize the image processor."""
-        self.ALLOWED_TOOLS = ['inkscape', 'autotrace', 'opencv']
-        self._validate_tools()
-        self.path_validator = PathValidator()
-    
-    def _validate_tools(self) -> None:
-        """Validate and initialize available tools safely."""
-        self.has_inkscape = self._check_tool_exists('inkscape')
-        self.has_autotrace = self._check_tool_exists('autotrace')
-        self.has_opencv = True  # OpenCV is installed via pip
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.DEBUG)
         
-        print(f"Available vectorization tools: " +
-              f"Inkscape: {self.has_inkscape}, " +
-              f"AutoTrace: {self.has_autotrace}, " +
-              f"OpenCV: {self.has_opencv}")
-    
-    def _check_tool_exists(self, tool_name: str) -> bool:
-        """Safely check if a command-line tool exists."""
-        if tool_name not in self.ALLOWED_TOOLS:
-            return False
-        return shutil.which(tool_name) is not None
-
-    def check_tool_exists(self, tool_name: str) -> bool:
-        """
-        Check if a required external tool exists in the system PATH
-        
-        Args:
-            tool_name: Name of the tool to check (e.g., 'inkscape')
-            
-        Returns:
-            bool: True if tool exists, False otherwise
-        """
-        return shutil.which(tool_name) is not None
-
-    def _validate_path(self, path: str) -> Path:
-        """Backwards compatibility method for _validate_input_path"""
-        return self._validate_input_path(path)
-    
-    def _validate_input_path(self, path: str) -> Path:
-        """Validate that an input path exists."""
-        resolved_path = Path(path).resolve()
-        if not resolved_path.exists():
-            raise ValueError(f"Input file not found: {resolved_path}")
-        return resolved_path
-
-    def _validate_output_directory(self, path: str) -> Path:
-        """Validate that the output directory exists."""
-        resolved_path = Path(path).resolve()
-        if not resolved_path.parent.exists():
-            raise ValueError(f"Output directory does not exist: {resolved_path.parent}")
-        return resolved_path
-
-    def _validate_executable(self, name: str, path: str) -> str:
-        """Validate that an executable is safe to use."""
-        if not path:
-            raise RuntimeError(f"{name} not found")
-        if not self.path_validator.is_safe_executable(path):
-            raise ValueError(f"Unsafe {name} path: {path}")
-        return path
-
-    def _run_subprocess(self, cmd: list, timeout: int = None) -> None:
-        """Run a subprocess with validated arguments."""
-        try:
-            # nosec B603 - command and arguments are validated before calling
-            subprocess.run(
-                cmd,
-                check=True,
-                capture_output=True,
-                timeout=timeout
-            )
-        except subprocess.SubprocessError as e:
-            raise RuntimeError(f"Command failed: {' '.join(cmd)}") from e
-    
-    def get_image_dpi(self, image_path):
-        """
-        Get the DPI of an image.
-        
-        Args:
-            image_path (str): Path to the image.
-            
-        Returns:
-            float or None: The DPI of the image, or None if not available.
-        """
-        try:
-            # Use OpenCV to get image dimensions
-            img = cv2.imread(image_path)
-            if img is None:
-                return None
-            
-            # Default to 96 DPI if not specified
-            return 96.0
-        except Exception as e:
-            print(f"Error getting image DPI: {e}")
-            return None
-    
-    def convert_to_svg(self, input_path: str, output_path: str, timeout: int = 30) -> str:
-        """Convert image to SVG safely using available tools."""
-        input_path = self._validate_input_path(input_path)
-        
-        # Validate output path is safe
-        if not self.path_validator.is_safe_output_path(output_path):
-            raise ValueError(f"Unsafe output path: {output_path}")
-        output_path = Path(output_path).resolve()
-        
-        # Try Inkscape first if available
-        if self.has_inkscape:
-            try:
-                inkscape_path = self._validate_executable('Inkscape', shutil.which('inkscape'))
-                cmd = [
-                    inkscape_path,
-                    '--export-filename', str(output_path),
-                    '--export-plain-svg',
-                    str(input_path)
-                ]
-                self._run_subprocess(cmd, timeout)
-                
-                if output_path.exists():
-                    return str(output_path)
-            except Exception as e:
-                print(f"Inkscape conversion failed: {e}")
-        
-        # Try AutoTrace if available
-        if self.has_autotrace:
-            try:
-                autotrace_path = self._validate_executable('AutoTrace', shutil.which('autotrace'))
-                cmd = [
-                    autotrace_path,
-                    '--output-file', str(output_path),
-                    '--output-format', 'svg',
-                    str(input_path)
-                ]
-                self._run_subprocess(cmd, timeout)
-                
-                if output_path.exists():
-                    return str(output_path)
-            except Exception as e:
-                print(f"AutoTrace conversion failed: {e}")
-        
-        # Use OpenCV as a last resort
-        try:
-            return self._vectorize_with_opencv(input_path)
-        except Exception as e:
-            print(f"OpenCV conversion failed: {e}")
-        
-        raise RuntimeError("All conversion methods failed")
+        # Add console handler if none exists
+        if not self.logger.handlers:
+            handler = logging.StreamHandler()
+            handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+            self.logger.addHandler(handler)
     
     def vectorize_image(self, image_path):
-        """
-        Vectorize an image using available tools.
+        """Convert raster image to vector format"""
+        self.logger.info(f"Processing image: {image_path}")
         
-        Args:
-            image_path (str): Path to the image to vectorize.
-            
-        Returns:
-            str: Path to the vectorized SVG.
-            
-        Raises:
-            ValueError: If all vectorization methods fail.
-        """
-        errors = []
+        # Check if file exists
+        if not os.path.exists(image_path):
+            self.logger.error(f"Image file not found: {image_path}")
+            return None
         
-        # Try Inkscape first if available
-        if self.has_inkscape:
-            try:
-                return self._vectorize_with_inkscape(image_path)
-            except Exception as e:
-                errors.append(f"Inkscape vectorization failed: {e}")
-        
-        # Try AutoTrace if available
-        if self.has_autotrace:
-            try:
-                return self._vectorize_with_autotrace(image_path)
-            except Exception as e:
-                errors.append(f"AutoTrace vectorization failed: {e}")
-        
-        # Try OpenCV as a fallback
+        # Load and analyze image
         try:
-            return self._vectorize_with_opencv(image_path)
+            with Image.open(image_path) as img:
+                self.logger.info(f"Image size: {img.size}, format: {img.format}, mode: {img.mode}")
+                
+                # Convert to RGB if needed
+                if img.mode != 'RGB':
+                    self.logger.info(f"Converting image from {img.mode} to RGB")
+                    img = img.convert('RGB')
+                
+                # Convert to numpy array for OpenCV processing
+                image = np.array(img)
         except Exception as e:
-            errors.append(f"OpenCV vectorization failed: {e}")
-        
-        # If all methods fail, raise an error
-        raise ValueError(f"All vectorization methods failed: {', '.join(errors)}")
-    
-    def _vectorize_with_inkscape(self, image_path: str) -> str:
-        """Safely vectorize using Inkscape."""
-        input_path = self._validate_input_path(image_path)
-        output_path = input_path.with_suffix('.svg')
-        
-        inkscape_path = shutil.which('inkscape')
-        if not inkscape_path:
-            raise RuntimeError("Inkscape not found")
-            
-        inkscape_path = self._validate_executable('Inkscape', inkscape_path)
-            
-        cmd = [
-            inkscape_path,
-            '--export-filename', str(output_path),
-            '--export-plain-svg',
-            str(input_path)
-        ]
-        
-        self._run_subprocess(cmd)
-        
-        if not output_path.exists():
-            raise ValueError("Inkscape failed to create output file")
-        return str(output_path)
-    
-    def _vectorize_with_autotrace(self, image_path: str) -> str:
-        """Safely vectorize using AutoTrace."""
-        input_path = self._validate_input_path(image_path)
-        output_path = self._validate_output_directory(input_path.with_suffix('.svg'))
-        
-        autotrace_path = shutil.which('autotrace')
-        if not autotrace_path:
-            raise RuntimeError("AutoTrace not found")
-        
-        autotrace_path = self._validate_executable('AutoTrace', autotrace_path)
-        
-        cmd = [
-            autotrace_path,
-            '--output-file', str(output_path),
-            '--output-format', 'svg',
-            str(input_path)
-        ]
-        
-        self._run_subprocess(cmd)
-        
-        if not output_path.exists():
-            raise ValueError("AutoTrace failed to create output file")
-        return str(output_path)
-    
-    def _vectorize_with_opencv(self, image_path):
-        """
-        Vectorize an image using OpenCV.
-        
-        Args:
-            image_path (str): Path to the image to vectorize.
-            
-        Returns:
-            str: Path to the vectorized SVG.
-            
-        Raises:
-            ValueError: If the image cannot be loaded or processed.
-        """
-        # Load the image
-        img = cv2.imread(image_path)
-        if img is None:
-            raise ValueError(f"Failed to load image: {image_path}")
+            self.logger.error(f"Error opening image: {e}")
+            return None
         
         # Convert to grayscale
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        try:
+            gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+            self.logger.info(f"Converted to grayscale. Shape: {gray.shape}")
+        except Exception as e:
+            self.logger.error(f"Error converting to grayscale: {e}")
+            return None
         
-        # Apply threshold to get binary image
-        _, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+        # Apply adaptive thresholding
+        try:
+            binary = cv2.adaptiveThreshold(
+                gray,
+                255,
+                cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                cv2.THRESH_BINARY_INV,
+                11,
+                2
+            )
+            self.logger.info("Applied adaptive thresholding")
+            
+            # Save debug image
+            debug_path = os.path.join(os.path.dirname(image_path), "debug_binary.png")
+            cv2.imwrite(debug_path, binary)
+            self.logger.info(f"Saved binary debug image to: {debug_path}")
+        except Exception as e:
+            self.logger.error(f"Error during thresholding: {e}")
+            return None
         
         # Find contours
-        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        # Create output path
-        output_path = str(image_path)
-        if output_path.lower().endswith('.png'):
-            output_path = output_path.replace('.png', '.svg')
-        elif output_path.lower().endswith('.jpg'):
-            output_path = output_path.replace('.jpg', '.svg')
-        elif output_path.lower().endswith('.jpeg'):
-            output_path = output_path.replace('.jpeg', '.svg')
-        else:
-            output_path = output_path + '.svg'
-        
-        # Create SVG drawing
-        dwg = svgwrite.Drawing(output_path, profile='tiny')
-        
-        # Add contours to SVG
-        for contour in contours:
-            # Simplify contour
-            epsilon = 0.01 * cv2.arcLength(contour, True)
-            approx = cv2.approxPolyDP(contour, epsilon, True)
+        try:
+            contours, hierarchy = cv2.findContours(
+                binary,
+                cv2.RETR_EXTERNAL,
+                cv2.CHAIN_APPROX_SIMPLE
+            )
+            self.logger.info(f"Found {len(contours)} contours")
             
-            # Convert contour to SVG path
-            points = [f"{pt[0][0]},{pt[0][1]}" for pt in approx]
-            if points:
-                path_data = "M " + " L ".join(points) + " Z"
-                dwg.add(dwg.path(d=path_data, fill='none', stroke='black'))
+            # Draw contours on debug image
+            debug_contours = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
+            cv2.drawContours(debug_contours, contours, -1, (0,255,0), 2)
+            debug_path = os.path.join(os.path.dirname(image_path), "debug_contours.png")
+            cv2.imwrite(debug_path, debug_contours)
+            self.logger.info(f"Saved contours debug image to: {debug_path}")
+        except Exception as e:
+            self.logger.error(f"Error finding contours: {e}")
+            return None
         
-        # Save SVG
-        dwg.save()
-        
-        return output_path
-    
-    def trace_bitmap(self, image_path):
-        """
-        Trace a bitmap image to create a vector representation.
-        This is a wrapper around vectorize_image for compatibility.
-        
-        Args:
-            image_path (str): Path to the image to trace.
+        # Detect lines
+        try:
+            lines = cv2.HoughLinesP(
+                binary,
+                rho=1,
+                theta=np.pi/180,
+                threshold=50,
+                minLineLength=20,
+                maxLineGap=10
+            )
             
-        Returns:
-            str: Path to the traced SVG.
-        """
-        return self.vectorize_image(image_path)
+            if lines is not None:
+                self.logger.info(f"Found {len(lines)} lines")
+                
+                # Draw lines on debug image
+                debug_lines = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
+                for line in lines:
+                    x1, y1, x2, y2 = line[0]
+                    cv2.line(debug_lines, (x1,y1), (x2,y2), (0,0,255), 2)
+                debug_path = os.path.join(os.path.dirname(image_path), "debug_lines.png")
+                cv2.imwrite(debug_path, debug_lines)
+                self.logger.info(f"Saved lines debug image to: {debug_path}")
+            else:
+                self.logger.warning("No lines detected")
+        except Exception as e:
+            self.logger.error(f"Error detecting lines: {e}")
+            return None
+        
+        # Create SVG path
+        try:
+            # Convert contours to SVG paths
+            svg_paths = []
+            for contour in contours:
+                path = "M"
+                for i, point in enumerate(contour):
+                    x, y = point[0]
+                    if i == 0:
+                        path += f" {x},{y}"
+                    else:
+                        path += f" L {x},{y}"
+                path += " Z"
+                svg_paths.append(path)
+            
+            # Add lines to SVG
+            if lines is not None:
+                for line in lines:
+                    x1, y1, x2, y2 = line[0]
+                    path = f"M {x1},{y1} L {x2},{y2}"
+                    svg_paths.append(path)
+            
+            # Create SVG file
+            svg_path = os.path.splitext(image_path)[0] + ".svg"
+            width, height = image.shape[1], image.shape[0]
+            
+            with open(svg_path, 'w') as f:
+                f.write(f'<?xml version="1.0" encoding="UTF-8"?>\n')
+                f.write(f'<svg width="{width}" height="{height}" xmlns="http://www.w3.org/2000/svg">\n')
+                for path in svg_paths:
+                    f.write(f'  <path d="{path}" stroke="black" fill="none"/>\n')
+                f.write('</svg>\n')
+            
+            self.logger.info(f"Created SVG file: {svg_path}")
+            return svg_path
+            
+        except Exception as e:
+            self.logger.error(f"Error creating SVG: {e}")
+            return None
