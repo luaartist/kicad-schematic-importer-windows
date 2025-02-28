@@ -9,8 +9,12 @@ import stat
 
 def find_kicad_plugin_dir(kicad_version="7.0"):
     """Find KiCad plugin directory for Windows"""
-    # Windows: %APPDATA%\kicad\7.0\scripting\plugins
-    return os.path.join(os.getenv("APPDATA"), "kicad", kicad_version, "scripting", "plugins")
+    if kicad_version == "9.0":
+        # KiCad 9.0 uses a different location
+        return os.path.join(os.path.expanduser("~"), "Documents", "KiCad", "9.0", "3rdparty", "plugins")
+    else:
+        # Windows: %APPDATA%\kicad\7.0\scripting\plugins
+        return os.path.join(os.getenv("APPDATA"), "kicad", kicad_version, "scripting", "plugins")
 
 def install_plugin(plugin_dir=None, kicad_plugin_dir=None, kicad_version="7.0", create_shortcut=False):
     """Install the plugin to KiCad plugins directory"""

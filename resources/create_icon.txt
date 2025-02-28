@@ -1,0 +1,20 @@
+# Creating an Icon for KiCad Plugin
+
+To create an icon for your KiCad plugin, you need to:
+
+1. Create a PNG file named "icon.png" in this directory (resources/)
+2. The icon should be 24x24 or 32x32 pixels in size
+3. The icon should be simple and recognizable
+
+You can use any image editing software to create the icon, such as:
+- GIMP
+- Inkscape
+- Photoshop
+- Paint.NET
+
+Once you have created the icon, place it in this directory and reinstall the plugin:
+```
+python install.py --kicad-version 9.0
+```
+
+Then restart KiCad completely.

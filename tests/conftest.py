@@ -2,7 +2,17 @@
 import pytest
 import platform
 import sys
+import os
 from pathlib import Path
+from unittest.mock import MagicMock
+
+# Add mock module path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
+try:
+    import mock_pcbnew
+    sys.modules['pcbnew'] = mock_pcbnew
+except ImportError:
+    sys.modules['pcbnew'] = MagicMock()
 
 # Define a fixture to check if we're on Windows
 @pytest.fixture

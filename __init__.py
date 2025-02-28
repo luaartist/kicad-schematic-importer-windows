@@ -1,23 +1,24 @@
+# This file makes the directory a Python package
+# It allows the plugin to be imported by KiCad
+
+# Import statements for the package
 import os
-import pcbnew
-import wx
-from src.core.schematic_importer import SchematicImporter
-from src.ui.import_dialog import ImportDialog
+import sys
 
-class SchematicImporterPlugin(pcbnew.ActionPlugin):
-    def defaults(self):
-        self.name = "Import Schematic from Image"
-        self.category = "Import"
-        self.description = "Import schematic from image and create KiCad components"
-        self.show_toolbar_button = True
-        self.icon_file_name = os.path.join(os.path.dirname(__file__), 'resources/icons/icon.png')
-    
-    def Run(self):
-        # Display the import dialog
-        board = pcbnew.GetBoard()
-        dialog = ImportDialog(None, board)
-        dialog.ShowModal()
-        dialog.Destroy()
+# Add the current directory to the Python path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
 
-# Register the plugin
-SchematicImporterPlugin().register()
+# For pytest compatibility, use absolute imports
+if __name__ != "__main__" and __package__ is None:
+    __package__ = os.path.basename(current_dir)
+
+# Import the SchematicImporter class from action_plugin.py
+try:
+    # Use absolute import for pytest compatibility
+    import action_plugin
+    SchematicImporter = action_plugin.SchematicImporter
+except Exception as e:
+    import traceback
+    traceback.print_exc()

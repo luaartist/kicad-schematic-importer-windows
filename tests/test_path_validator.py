@@ -31,12 +31,26 @@ class TestPathValidator:
     @pytest.mark.parametrize("os_name,path,expected", [
         ("Windows", "C:\\Program Files\\Test\\test.exe", True),
         ("Windows", "D:\\Unsafe\\test.exe", False),
-        ("Linux", "/usr/bin/test", True),
-        ("Linux", "/tmp/unsafe/test", False),
     ])
-    def test_is_safe_executable(self, monkeypatch, validator, os_name, path, expected):
-        """Test executable validation across platforms."""
-        monkeypatch.setattr(platform, 'system', lambda: os_name)
+    def test_is_safe_executable_windows(self, validator, os_name, path, expected):
+        """Test executable validation on Windows."""
+        # Skip if not on Windows
+        if platform.system() != "Windows":
+            pytest.skip("Test only runs on Windows")
+            
+        with patch.object(Path, 'exists', return_value=True):
+            assert validator.is_safe_executable(path) == expected
+            
+    @pytest.mark.parametrize("path,expected", [
+        ("/usr/bin/test", True),
+        ("/tmp/unsafe/test", False),
+    ])
+    def test_is_safe_executable_linux(self, validator, path, expected):
+        """Test executable validation on Linux."""
+        # Skip if not on Linux
+        if platform.system() != "Linux":
+            pytest.skip("Test only runs on Linux")
+            
         with patch.object(Path, 'exists', return_value=True):
             assert validator.is_safe_executable(path) == expected
 

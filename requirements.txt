@@ -6,3 +6,11 @@ skidl>=1.0.0
 svgpathtools>=1.5.0
 svgwrite>=1.4.0
 # python-potrace>=1.0.0 is optional and may not be available on all platforms
+
+# Advanced schematic importer dependencies
+networkx>=2.6.0  # For connection tracing and graph algorithms
+pymupdf>=1.19.0  # For PDF import (also known as fitz)
+scikit-image>=0.18.0  # For advanced image processing
+pytesseract>=0.3.8  # For OCR (text recognition)
+matplotlib>=3.4.0  # For visualization
+shapely>=1.8.0  # For geometric operations

@@ -102,20 +102,17 @@ class PathValidator:
             # For testing purposes, we'll consider paths that don't exist as valid
             # This allows tests to use mock paths
             
-            # Get safe directories dynamically based on current platform
-            safe_dirs = self._get_safe_directories()
-            
             # Use case-insensitive comparison on Windows
             if platform.system() == "Windows":
                 return any(
                     str(resolved_path).lower().startswith(safe_dir.lower())
-                    for safe_dir in safe_dirs
+                    for safe_dir in self._safe_dirs
                 )
             else:
                 # Use case-sensitive comparison on Linux/Unix
                 return any(
                     str(resolved_path).startswith(safe_dir)
-                    for safe_dir in safe_dirs
+                    for safe_dir in self._safe_dirs
                 )
         except ValueError:  # Handle any path comparison errors
             return False

@@ -137,9 +137,12 @@ class TestImageProcessor:
 
         # Test with subprocess error
         mock_run.side_effect = subprocess.CalledProcessError(1, 'inkscape', stderr="Error message")
-        with pytest.raises(RuntimeError) as excinfo:
-            image_processor.convert_to_svg(test_image_path, output_path)
-        assert "Command failed with exit code" in str(excinfo.value)
+        # Need to patch has_inkscape back to True for this test
+        with patch.object(image_processor, 'has_inkscape', True), \
+             patch.object(image_processor.path_validator, 'is_safe_executable', return_value=True):
+            with pytest.raises(RuntimeError) as excinfo:
+                image_processor.convert_to_svg(test_image_path, output_path)
+            assert "Command failed with exit code" in str(excinfo.value)
     
     @patch.object(ImageProcessor, '_vectorize_with_inkscape')
     @patch.object(ImageProcessor, '_vectorize_with_potrace')

@@ -1,8 +1,16 @@
 import pcbnew
 import wx
 from pathlib import Path
-from ..utils.alternative_image_processor import AlternativeImageProcessor
-from ..ui.import_dialog import ImportDialog
+import os
+import sys
+
+# Add the plugin directory to the Python path
+plugin_dir = os.path.dirname(os.path.abspath(__file__))
+if plugin_dir not in sys.path:
+    sys.path.insert(0, plugin_dir)
+
+from src.utils.alternative_image_processor import AlternativeImageProcessor
+from src.ui.import_dialog import ImportDialog
 
 class SchematicImporterPlugin(pcbnew.ActionPlugin):
     def __init__(self):
