@@ -2,6 +2,7 @@
 import os
 import shutil
 import platform
+import json
 
 def find_kicad_plugin_dir(kicad_version="9.0"):
     """Find KiCad plugin directory"""
@@ -18,6 +19,41 @@ def find_kicad_plugin_dir(kicad_version="9.0"):
     else:  # Linux
         # Linux: ~/.local/share/kicad/scripting/plugins
         return os.path.join(os.path.expanduser("~"), ".local", "share", "kicad", kicad_version, "scripting", "plugins")
+
+def create_plugin_files(target_dir):
+    # Plugin metadata
+    metadata = {
+        "name": "Schematic Importer Full",
+        "description": "A plugin to import schematics from images using computer vision",
+        "version": "1.0.0",
+        "author": "Your Name",
+        "min_kicad_version": "7.0"
+    }
+    
+    # Write metadata
+    with open(os.path.join(target_dir, "metadata.json"), "w") as f:
+        json.dump(metadata, f, indent=4)
+    
+    # Write main plugin file
+    plugin_content = (
+        "import pcbnew\n"
+        "import os\n"
+        "import sys\n\n"
+        "class SchematicImporterFull(pcbnew.ActionPlugin):\n"
+        "    def defaults(self):\n"
+        "        self.name = 'Schematic Importer Full'\n"
+        "        self.category = 'Import Plugin'\n"
+        "        self.description = 'Import schematics from images'\n"
+        "        self.show_toolbar_button = True\n"
+        "        self.icon_file_name = os.path.join(os.path.dirname(__file__), 'icon.png')\n\n"
+        "    def Run(self):\n"
+        "        # Plugin logic here\n"
+        "        pass\n\n"
+        "SchematicImporterFull().register()\n"
+    )
+    
+    with open(os.path.join(target_dir, "plugin.py"), "w") as f:
+        f.write(plugin_content)
 
 def install_full_plugin():
     """Install the full plugin to KiCad 9.0 plugins directory"""

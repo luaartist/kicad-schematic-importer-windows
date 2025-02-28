@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file>img/application-pdf.png</file>
+        <file>img/application-x-applix-spreadsheet.png</file>
+        <file>img/text-csv.png</file>
+        <file>img/kicad-lib.png</file>
+        <file>img/new.png</file>
+        <file>img/open.png</file>
+        <file>img/import.png</file>
+        <file>img/save.png</file>
+        <file>img/save-as.png</file>
+        <file>img/uConfig.ico</file>
+    </qresource>
+</RCC>

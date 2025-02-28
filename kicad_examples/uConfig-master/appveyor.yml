@@ -1,0 +1,64 @@
+image: Visual Studio 2019
+
+version: 0.{build}
+
+environment:
+  global:
+    QTDIR: C:\Qt\5.15.2\mingw81_32
+    MINGW: C:\Qt\Tools\mingw810_32
+
+clone_folder: c:\dev\uconfig
+clone_depth: 5
+
+install:
+  - set PATH=%PATH%;%QTDIR%\bin;%MINGW%\bin
+  - ls %QTDIR%\bin
+  - ls %MINGW%\bin
+  - git submodule update --init --recursive
+  - qmake -v
+  - g++ --version
+  - cd %APPVEYOR_BUILD_FOLDER%\
+  - curl -fsSL -o include-poppler.tar.gz http://uniswarm.eu/include-poppler.tar.gz
+  - tar -zxvf include-poppler.tar.gz
+  - rm include-poppler.tar.gz
+  - mkdir bin
+  - cd bin
+  - curl -fsSL -o bin-poppler-win32.tar.gz http://uniswarm.eu/bin-poppler-win32.tar.gz
+  - tar -zxvf bin-poppler-win32.tar.gz
+  - rm bin-poppler-win32.tar.gz
+
+before_build:
+  - mkdir %APPVEYOR_BUILD_FOLDER%\build
+  - cd %APPVEYOR_BUILD_FOLDER%\build
+  - qmake ..\src\uConfig.pro -r -Wall CONFIG+=release
+
+build_script:
+  - cd %APPVEYOR_BUILD_FOLDER%\build
+  - mingw32-make.exe -j2
+  - mingw32-make.exe check
+
+after_build:
+  - cd %APPVEYOR_BUILD_FOLDER%
+  - windeployqt.exe "%APPVEYOR_BUILD_FOLDER%\bin\uconfig_gui.exe" "%APPVEYOR_BUILD_FOLDER%\bin\kicad.dll" "%APPVEYOR_BUILD_FOLDER%\bin\pdf_extract.dll" "%APPVEYOR_BUILD_FOLDER%\bin\libpoppler-qt5.dll"
+  - 7z a uconfig-win32-v0.zip "%APPVEYOR_BUILD_FOLDER%\..\*" -xr!build -xr!.git
+
+test: off
+
+artifacts:
+  - path: uconfig-win32-v0.zip
+    name: uconfig
+
+deploy:
+  release: uconfig-v0
+  description: 'Beta build for win32'
+  provider: GitHub
+  auth_token:
+    secure: NUubM/JkcsfgUG/w6aXNplWvl4NJ7OeEUqsZsZP5Krfsa5XyPgv/vu8rLzuh5lNg
+  file: uconfig-win32-v0.zip
+  artifacts: ''
+  force_update: true
+  draft: false
+  prerelease: false
+  on:
+    branch: master
+    appveyor_repo_tag: true

@@ -1,9 +1,26 @@
 {
-    "python.testing.pytestArgs": [
-        "tests"
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/src"
     ],
-    "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
-    "files.eol": "\r\n",
-    "files.encoding": "utf8"
+    "python.testing.unittestEnabled": false,
+    "python.testing.nosetestsEnabled": false,
+    "editor.formatOnSave": true,
+    "python.formatting.provider": "black",
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": true,
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/*.pyc": true
+    },
+    "[python]": {
+        "editor.rulers": [
+            88
+        ],
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true,
+        "editor.formatOnSave": true
+    }
 }

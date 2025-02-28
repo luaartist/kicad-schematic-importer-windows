@@ -1,0 +1,25 @@
+{
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "settings": {
+        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+        "python.analysis.extraPaths": [
+            "${workspaceFolder}/src"
+        ]
+    },
+    "extensions": {
+        "recommendations": [
+            "ms-python.python",
+            "ms-python.vscode-pylance",
+            "littlefoxteam.vscode-python-test-adapter",
+            "donjayamanne.python-environment-manager",
+            "kevinrose.vsc-python-indent",
+            "njpwerner.autodocstring",
+            "ms-python.python-type-hint",
+            "ms-vscode.kicad"
+        ]
+    }
+}

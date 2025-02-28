@@ -2,10 +2,20 @@ import os
 import pytest
 import cv2
 import numpy as np
+import shutil
 from pathlib import Path
 from src.utils.alternative_image_processor import AlternativeImageProcessor
 
-def test_image_processor_debug_output():
+@pytest.fixture
+def test_dir():
+    dir_path = Path("tests/test_files")
+    dir_path.mkdir(parents=True, exist_ok=True)
+    yield dir_path
+    # Clean up properly
+    if dir_path.exists():
+        shutil.rmtree(dir_path)
+
+def test_image_processor_debug_output(test_dir):
     """Test that image processor generates debug images"""
     # Create a test image with some components and connections
     image = np.zeros((200, 200, 3), dtype=np.uint8)
@@ -18,8 +28,6 @@ def test_image_processor_debug_output():
     cv2.line(image, (40, 30), (120, 130), (255, 255, 255), 2)
     
     # Save test image
-    test_dir = Path(__file__).parent / "test_files"
-    test_dir.mkdir(exist_ok=True)
     test_image_path = test_dir / "test_schematic.png"
     cv2.imwrite(str(test_image_path), image)
     

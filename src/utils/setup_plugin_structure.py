@@ -291,3 +291,41 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+import os
+import shutil
+
+def setup_plugin_structure():
+    # Base plugin directory
+    base_dir = r"C:\Users\walla\Documents\KiCad\9.0\3rdparty\plugins\enhanced_importer_v2"
+    
+    # Create directory structure
+    directories = [
+        "",
+        "resources",
+        "resources/icons",
+        "src",
+        "src/utils",
+        "src/ui"
+    ]
+    
+    for dir_path in directories:
+        full_path = os.path.join(base_dir, dir_path)
+        os.makedirs(full_path, exist_ok=True)
+        
+        # Create __init__.py in each directory
+        init_path = os.path.join(full_path, "__init__.py")
+        if not os.path.exists(init_path):
+            with open(init_path, "w") as f:
+                f.write("# This directory is a Python package\n")
+
+    # Create a placeholder icon
+    icon_path = os.path.join(base_dir, "resources", "icons", "icon.png")
+    if not os.path.exists(icon_path):
+        # Create a minimal 32x32 black PNG file
+        # You should replace this with your actual icon
+        with open(icon_path, "wb") as f:
+            f.write(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100)
+
+if __name__ == "__main__":
+    setup_plugin_structure()

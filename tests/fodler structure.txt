@@ -1,0 +1,7 @@
+project/
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py
+│   └── test_*.py files
+├── pytest.ini
+└── requirements-dev.txt

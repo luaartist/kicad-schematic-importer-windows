@@ -1,0 +1,8 @@
+- Python (Microsoft)
+- Pylance
+- Python Test Explorer
+- Python Environment Manager
+- Python Indent
+- autoDocstring - Python Docstring Generator
+- Python Type Hint
+- KiCad Syntax

@@ -1,0 +1,25 @@
+# Core dependencies
+opencv-python>=4.5.0
+numpy>=1.24.0  # Updated for Python 3.12 compatibility
+pillow>=8.0.0
+skidl>=1.0.0
+svgpathtools>=1.5.0
+svgwrite>=1.4.0
+
+# Advanced schematic importer dependencies
+networkx>=2.6.0
+pymupdf>=1.19.0
+scikit-image>=0.18.0
+pytesseract>=0.3.8
+matplotlib>=3.4.0
+shapely>=1.8.0
+
+# Testing and code quality dependencies
+pytest>=7.0.0
+black>=22.0.0
+pylint>=2.17.0
+
+# GUI dependencies
+wxPython>=4.2.0
+
+# Remove pcbnew as it's part of KiCad installation

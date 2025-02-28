@@ -1,0 +1,76 @@
+name: 'KiBot GitHub action'
+description: 'automatically generates documentation, fabrication, etc. files for any KiCad project.'
+author: 'Salvador E. Tropea'
+inputs:
+  config:
+    description: 'The config file to use'
+    required: false
+    default: '__SCAN__'
+  dir:
+    description: 'The output directory [default: .]'
+    required: false
+    default: '.'
+  board:
+    description: 'The PCB .kicad-pcb board file [default: first *.kicad_pcb found]'
+    required: false
+    default: '__SCAN__'
+# Currently impossible, too much limitations
+#   kicad:
+#     description: 'KiCad major version (5 or 6) [default: 6]'
+#     required: false
+#     default: 6
+  schema:
+    description: 'The schematic file (.sch) [default: first *.*sch found]'
+    required: false
+    default: '__SCAN__'
+  quickstart:
+    description: 'Scans for projects and generates configs and outputs, use YES [default: NO]'
+    required: false
+    default: 'NO'
+  skip:
+    description: 'Skip preflights, comma separated or "all" [default: no skip]'
+    required: false
+    default: '__NONE__'
+  targets:
+    description: 'List of targets to generate separated by spaces. To only run preflights use __NONE__  [default: generate all]'
+    required: false
+    default: '__ALL__'
+  variant:
+    description: 'Global variant to use [default: no variants]'
+    required: false
+    default: '__NONE__'
+  install3D:
+    description: 'Install the 3D models, use YES [default: NO]'
+    required: false
+    default: 'NO'
+  verbose:
+    description: 'Verbosity level [default: 0]'
+    required: false
+    default: '0'
+  additional_args:
+    description: 'Additional arguments to pass to KiBot'
+    required: false
+    default: ''
+  cache3D:
+    description: 'Cache the 3D models, use YES [default: NO]'
+    required: false
+    default: 'NO'
+runs:
+  using: 'docker'
+  image: Dockerfile
+  args:
+    -  -c ${{ inputs.config }}
+    -  -C ${{ inputs.cache3D }}
+    -  -d ${{ inputs.dir }}
+    -  -b ${{ inputs.board }}
+    -  -e ${{ inputs.schema }}
+    -  -i ${{ inputs.install3D }}
+    -  -q ${{ inputs.quickstart }}
+    -  -s ${{ inputs.skip }}
+    -  -t ${{ inputs.targets }}
+    -  -v ${{ inputs.verbose }}
+    -  -V ${{ inputs.variant }}
+    -  -x ${{ inputs.additional_args }}
+branding:
+  icon: 'cpu'
+  color: 'green'

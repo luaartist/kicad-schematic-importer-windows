@@ -14,3 +14,14 @@ scikit-image>=0.18.0  # For advanced image processing
 pytesseract>=0.3.8  # For OCR (text recognition)
 matplotlib>=3.4.0  # For visualization
 shapely>=1.8.0  # For geometric operations
+
+# Testing and code quality dependencies
+pytest>=7.0.0
+black>=22.0.0
+pylint>=2.17.0
+
+# GUI dependencies
+wxPython>=4.2.0
+
+# PCB design dependencies
+pcbnew

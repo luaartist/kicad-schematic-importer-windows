@@ -1,0 +1,26 @@
+# Example KiBot config file
+kibot:
+  version: 1
+
+outputs:
+  - name: 'bom_internal'
+    comment: "Bill of Materials in XLSX format"
+    type: bom
+    dir: BoM
+    options:
+      xlsx:
+        digikey_link: 'digikey#'
+        mouser_link: 'mouser#'
+        lcsc_link: 'LCSC#'
+      output: '%f.%x'
+      columns:
+        - References
+        - Part
+        - Value
+        - Quantity Per PCB
+        - digikey#
+        - digikey_alt#
+        - mouser#
+        - mouser_alt#
+        - LCSC#
+        - manf#

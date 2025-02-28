@@ -1,0 +1,83 @@
+KiCad Examples Analysis Report
+==============================
+Classes
+-------
+None found
+
+Functions
+---------
+None found
+
+Imports
+-------
+None found
+
+Constants
+---------
+None found
+
+YAML File Issues
+================
+Version Issues
+--------------
+None found
+
+Filter Issues
+-------------
+None found
+
+Output Issues
+-------------
+- Output missing type in kicad_examples\KiBot-master\experiments\strict_yaml\test.yaml: gerbers
+- Output missing type in kicad_examples\KiBot-master\tests\yaml_samples\error_needs_type.kibot.yaml: PDF
+
+Structure Issues
+----------------
+- Error processing kicad_examples\KiBot-master\tests\yaml_samples\ibom_all_ops7.kibot.yaml: string indices must be integers, not 'str'
+- Error processing kicad_examples\KiBot-master\tests\yaml_samples\ibom_all_ops8.kibot.yaml: string indices must be integers, not 'str'
+- YAML parsing error in kicad_examples\KiBot-master\experiments\strict_yaml\scanner_error.yaml: mapping values are not allowed here
+  in "kicad_examples\KiBot-master\experiments\strict_yaml\scanner_error.yaml", line 3, column 23
+- YAML parsing error in kicad_examples\KiBot-master\kibot\resources\config_templates\3DRender.kibot.yaml: while scanning for the next token
+found character '@' that cannot start any token
+  in "kicad_examples\KiBot-master\kibot\resources\config_templates\3DRender.kibot.yaml", line 9, column 10
+- YAML parsing error in kicad_examples\KiBot-master\kibot\resources\config_templates\CheckZoneFill.kibot.yaml: while scanning for the next token
+found character '@' that cannot start any token
+  in "kicad_examples\KiBot-master\kibot\resources\config_templates\CheckZoneFill.kibot.yaml", line 29, column 18
+- YAML parsing error in kicad_examples\KiBot-master\kibot\resources\config_templates\Elecrow.kibot.yaml: while scanning for the next token
+found character '@' that cannot start any token
+  in "kicad_examples\KiBot-master\kibot\resources\config_templates\Elecrow.kibot.yaml", line 17, column 10
+- YAML parsing error in kicad_examples\KiBot-master\kibot\resources\config_templates\ExportProject.kibot.yaml: while scanning for the next token
+found character '@' that cannot start any token
+  in "kicad_examples\KiBot-master\kibot\resources\config_templates\ExportProject.kibot.yaml", line 9, column 10
+- YAML parsing error in kicad_examples\KiBot-master\kibot\resources\config_templates\FusionPCB.kibot.yaml: while scanning for the next token
+found character '@' that cannot start any token
+  in "kicad_examples\KiBot-master\kibot\resources\config_templates\FusionPCB.kibot.yaml", line 17, column 10
+- YAML parsing error in kicad_examples\KiBot-master\kibot\resources\config_templates\JLCPCB.kibot.yaml: while scanning for the next token
+found character '@' that cannot start any token
+  in "kicad_examples\KiBot-master\kibot\resources\config_templates\JLCPCB.kibot.yaml", line 42, column 10
+- YAML parsing error in kicad_examples\KiBot-master\kibot\resources\config_templates\MacroFab_XYRS.kibot.yaml: while scanning for the next token
+found character '@' that cannot start any token
+  in "kicad_examples\KiBot-master\kibot\resources\config_templates\MacroFab_XYRS.kibot.yaml", line 10, column 10
+- YAML parsing error in kicad_examples\KiBot-master\kibot\resources\config_templates\P-Ban.kibot.yaml: while scanning for the next token
+found character '@' that cannot start any token
+  in "kicad_examples\KiBot-master\kibot\resources\config_templates\P-Ban.kibot.yaml", line 17, column 10
+- YAML parsing error in kicad_examples\KiBot-master\kibot\resources\config_templates\PCBWay.kibot.yaml: while scanning for the next token
+found character '@' that cannot start any token
+  in "kicad_examples\KiBot-master\kibot\resources\config_templates\PCBWay.kibot.yaml", line 17, column 10
+- YAML parsing error in kicad_examples\KiBot-master\kibot\resources\config_templates\Testpoints_by_attr.kibot.yaml: while scanning for the next token
+found character '@' that cannot start any token
+  in "kicad_examples\KiBot-master\kibot\resources\config_templates\Testpoints_by_attr.kibot.yaml", line 14, column 10
+- YAML parsing error in kicad_examples\KiBot-master\kibot\resources\config_templates\Testpoints_by_value.kibot.yaml: while scanning for the next token
+found character '@' that cannot start any token
+  in "kicad_examples\KiBot-master\kibot\resources\config_templates\Testpoints_by_value.kibot.yaml", line 17, column 10
+- YAML parsing error in kicad_examples\KiBot-master\tests\yaml_samples\definitions_gerbers.kibot.yaml: while scanning for the next token
+found character '@' that cannot start any token
+  in "kicad_examples\KiBot-master\tests\yaml_samples\definitions_gerbers.kibot.yaml", line 9, column 13
+- YAML parsing error in kicad_examples\KiBot-master\tests\yaml_samples\definitions_level_1.kibot.yaml: while scanning for the next token
+found character '@' that cannot start any token
+  in "kicad_examples\KiBot-master\tests\yaml_samples\definitions_level_1.kibot.yaml", line 8, column 11
+- YAML parsing error in kicad_examples\KiBot-master\tests\yaml_samples\error_yaml.kibot.yaml: mapping values are not allowed here
+  in "kicad_examples\KiBot-master\tests\yaml_samples\error_yaml.kibot.yaml", line 8, column 12
+- YAML parsing error in kicad_examples\KiBot-master\tests\yaml_samples\simple_position_csv_pre.kibot.yaml: while scanning for the next token
+found character '@' that cannot start any token
+  in "kicad_examples\KiBot-master\tests\yaml_samples\simple_position_csv_pre.kibot.yaml", line 13, column 14

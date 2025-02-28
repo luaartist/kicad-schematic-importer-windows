@@ -1,0 +1,35 @@
+# Example KiBot config file
+kibot:
+  version: 1
+
+global:
+  filters:
+# Filtered in the CLI
+#    - number: 8
+#      regex: kicad_common
+#    - number: 9
+#      regex: 'EnvironmentVariables'
+    - number: 10
+      regex: '(3D|templates)'
+
+filters:
+  - name: 'no_inductor'
+    comment: 'Inductors removed'
+    type: generic
+    exclude_refs:
+      - L*
+
+variants:
+  - name: 'no_inductor'
+    comment: 'Inductors removed'
+    type: kibom
+    file_id: '_(no_L)'
+    dnf_filter: 'no_inductor'
+
+outputs:
+  - name: 'no_inductor'
+    comment: "Inductors removed"
+    type: sch_variant
+    dir: no_inductor
+    options:
+      variant: 'no_inductor'

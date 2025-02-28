@@ -1,0 +1,73 @@
+# Example KiBot config file
+kibot:
+  version: 1
+
+global:
+#   remove_solder_paste_for_dnp: false
+#   remove_adhesive_for_dnp: false
+#   cross_footprints_for_dnp: false
+  hide_excluded: true
+  pcb_finish: ENIG
+  solder_mask_color: blue
+
+variants:
+  - name: 'production'
+    comment: 'Production variant'
+    type: ibom
+    file_id: '_(production)'
+    variants_blacklist: T2
+
+  - name: 'test'
+    comment: 'Test variant'
+    type: ibom
+    file_id: '_(test)'
+    variants_blacklist: T1
+
+  - name: 'default'
+    comment: 'Default variant'
+    type: ibom
+    variants_blacklist: T2,T3
+
+outputs:
+  - name: 'pcb_default'
+    comment: "PCB w/default variant"
+    type: pcb_variant
+    options:
+      variant: default
+      title: 'Hello %V'
+
+  - name: 'pcb_production'
+    comment: "PCB w/production variant"
+    type: pcb_variant
+    options:
+      variant: production
+      title: 'Hello %V'
+
+  - name: 'pcb_test'
+    comment: "PCB w/test variant"
+    type: pcb_variant
+    options:
+      variant: test
+      title: 'Hello %V'
+
+  - name: '3d_default'
+    comment: "3D view w/variant"
+    type: render_3d
+    options:
+      variant: default
+      ray_tracing: true
+      #show_solderpaste: false
+
+  - name: 'diff_pcb'
+    comment: "PCB difference with variant"
+    type: diff
+    layers: ['F.Cu', 'F.Fab', 'F.Adhes', 'F.Paste']
+    options:
+      # old: pcb_default
+      # old_type: output
+      old: ''
+      old_type: multivar
+      new: [pcb_default, pcb_production, pcb_test]
+      new_type: multivar
+      cache_dir: .cache
+      # add_link_id: true

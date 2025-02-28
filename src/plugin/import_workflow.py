@@ -11,15 +11,33 @@ except ImportError:
     
     cv2 = CV2Dummy()
 
-class SchematicImportWorkflow:
-    async def process_image(self, image_path: str):
-        # 1. Image preprocessing
-        preprocessed = await self.preprocess_image(image_path)
-        self.update_progress("Preprocessing complete", 25)
+import time
+import psutil
+import logging
 
+class SchematicImportWorkflow:
+    def __init__(self):
+        self.perf_logger = logging.getLogger('performance')
+        
+    async def process_image(self, image_path: str):
+        start_time = time.perf_counter()
+        mem_start = psutil.Process().memory_info().rss
+
+        # 1. Image preprocessing
+        preprocess_start = time.perf_counter()
+        preprocessed = await self.preprocess_image(image_path)
+        self.perf_logger.info(f"Preprocessing time: {time.perf_counter() - preprocess_start:.2f}s")
+        
         # 2. Component detection
+        detect_start = time.perf_counter()
         components = await self.detect_components(preprocessed)
-        self.update_progress("Component detection complete", 50)
+        self.perf_logger.info(f"Detection time: {time.perf_counter() - detect_start:.2f}s")
+
+        # Log overall performance
+        mem_end = psutil.Process().memory_info().rss
+        total_time = time.perf_counter() - start_time
+        self.perf_logger.info(f"Total processing time: {total_time:.2f}s")
+        self.perf_logger.info(f"Memory usage: {(mem_end - mem_start) / 1024 / 1024:.1f}MB")
         
         # 3. Connection analysis
         connections = await self.analyze_connections(preprocessed, components)

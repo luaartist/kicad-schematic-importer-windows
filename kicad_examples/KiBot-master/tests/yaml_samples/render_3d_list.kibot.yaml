@@ -1,0 +1,25 @@
+# Example KiBot config file
+# kibot -b tests/data/ArduinoLearningKitStarter.kicad_pcb -c tests/yaml_samples/render_3d_list.kibot.yaml -d r3d_lst
+# r3d_lst/ArduinoLearningKitStarter-3D_top.png
+kibot:
+  version: 1
+
+global:
+  solder_mask_color: blue
+  pcb_finish: ENIG
+
+outputs:
+  - name: render_list
+    comment: "Render with only some components"
+    type: render_3d
+    options:
+      width: 1280
+      height: 960
+      orthographic: true
+      zoom: 4
+      show_components: ["RV1", "RV2", "U1", "U2", "U3"]
+      highlight: ["RV1"]
+      # Looks ugly when rendered by software
+      # highlight_on_top: true
+      ray_tracing: true
+      auto_crop: true
