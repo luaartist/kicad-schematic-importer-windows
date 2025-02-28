@@ -2,72 +2,83 @@ import cv2
 import numpy as np
 
 class ConnectionTracer:
-    """Class for tracing connections between components in images"""
+    """Traces connections between components in schematic diagrams"""
     
     def __init__(self):
-        self.min_line_length = 20
-        self.max_line_gap = 10
-        self.next_id = 1
+        """Initialize the connection tracer"""
+        self.min_line_length = 20  # Minimum line length to consider
+        self.line_threshold = 40    # HoughLines parameter
+        self.max_gap = 10          # Maximum gap between line segments
     
     def trace_connections(self, image, components):
-        """Trace connections between components in an image"""
-        if image is None or not components:
-            return []
+        """
+        Trace connections between components in an image
         
-        # Convert to grayscale
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        Args:
+            image: OpenCV image (numpy array)
+            components: List of detected components
+            
+        Returns:
+            List of connections, where each connection is a dict with:
+                - points: List of points [(x1,y1), (x2,y2), ...]
+                - from_component: Component ID of source
+                - to_component: Component ID of destination
+        """
+        # Convert to grayscale if needed
+        if len(image.shape) == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = image.copy()
+            
+        # Edge detection
+        edges = cv2.Canny(gray, 50, 150, apertureSize=3)
         
-        # Threshold to get binary image
-        _, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
-        
-        # Detect lines using HoughLinesP
+        # Line detection using HoughLinesP for better line segment detection
         lines = cv2.HoughLinesP(
-            binary, 
-            rho=1,
-            theta=np.pi/180,
-            threshold=50,
+            edges, 
+            rho=1, 
+            theta=np.pi/180, 
+            threshold=self.line_threshold, 
             minLineLength=self.min_line_length,
-            maxLineGap=self.max_line_gap
+            maxLineGap=self.max_gap
         )
         
+        if lines is None:
+            return []
+            
         connections = []
-        if lines is not None:
-            for line in lines:
-                x1, y1, x2, y2 = line[0]
-                
-                # Find components connected by this line
-                start_component = self._find_nearest_component(x1, y1, components)
-                end_component = self._find_nearest_component(x2, y2, components)
-                
-                if start_component and end_component and start_component != end_component:
-                    # Create connection object
-                    connection = {
-                        "id": f"W{self.next_id}",
-                        "start_component": start_component["id"],
-                        "end_component": end_component["id"],
-                        "points": [(x1, y1), (x2, y2)]
-                    }
-                    connections.append(connection)
-                    self.next_id += 1
         
+        # Process each line
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            
+            # Find which components are connected by this line
+            from_component = self._find_closest_component(components, x1, y1)
+            to_component = self._find_closest_component(components, x2, y2)
+            
+            # Only add connection if it connects two different components
+            if from_component is not None and to_component is not None and from_component != to_component:
+                connections.append({
+                    'points': [(x1, y1), (x2, y2)],
+                    'from_component': from_component["id"],
+                    'to_component': to_component["id"]
+                })
+                
         return connections
     
-    def _find_nearest_component(self, x, y, components):
-        """Find the nearest component to a point"""
-        nearest = None
+    def _find_closest_component(self, components, x, y, max_distance=15):
+        """Find component closest to the point (x,y)"""
+        closest = None
         min_dist = float('inf')
         
         for component in components:
-            # Calculate distance to component center
+            # Calculate distance from point to component center
             dx = component["x"] - x
             dy = component["y"] - y
-            dist = dx*dx + dy*dy  # Square of distance
+            dist = np.sqrt(dx*dx + dy*dy)
             
-            # Check if point is within component bounds
-            half_width = component["width"] // 2
-            half_height = component["height"] // 2
-            if (abs(dx) <= half_width and abs(dy) <= half_height and dist < min_dist):
+            if dist < min_dist and dist <= max_distance:
                 min_dist = dist
-                nearest = component
-        
-        return nearest
+                closest = component
+                
+        return closest

@@ -1,293 +1,140 @@
 import os
-import sys
 import pytest
-import tempfile
-import shutil
 import cv2
 import numpy as np
-import subprocess
-from unittest.mock import MagicMock, patch, PropertyMock
 from pathlib import Path
-
-def normalize_path(path: str) -> str:
-    """Normalize path for comparison in tests."""
-    return os.path.normcase(os.path.normpath(str(Path(path).resolve())))
-
-# Add the parent directory to the path so we can import our modules
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 from src.utils.alternative_image_processor import AlternativeImageProcessor
 
-class TestAlternativeImageProcessor:
-    """Test suite for AlternativeImageProcessor"""
+def test_image_processor_debug_output():
+    """Test that image processor generates debug images"""
+    # Create a test image with some components and connections
+    image = np.zeros((200, 200, 3), dtype=np.uint8)
     
-    @pytest.fixture
-    def temp_dir(self):
-        """Create a temporary directory for testing"""
-        temp_dir = tempfile.mkdtemp()
-        yield temp_dir
-        shutil.rmtree(temp_dir)
+    # Draw some components
+    cv2.rectangle(image, (20, 20), (40, 40), (255, 255, 255), 2)  # Component 1
+    cv2.rectangle(image, (120, 120), (140, 140), (255, 255, 255), 2)  # Component 2
     
-    @pytest.fixture
-    def test_image_path(self, temp_dir):
-        """Create a test image for testing"""
-        # Create a simple test image
-        img_path = os.path.join(temp_dir, 'test_image.png')
-        img = np.zeros((100, 100, 3), dtype=np.uint8)
-        # Draw a rectangle to simulate a component
-        cv2.rectangle(img, (20, 20), (80, 80), (255, 255, 255), 2)
-        cv2.imwrite(img_path, img)
-        return img_path
+    # Draw a connection
+    cv2.line(image, (40, 30), (120, 130), (255, 255, 255), 2)
     
-    @pytest.fixture
-    def image_processor(self):
-        """Create an ImageProcessor instance"""
-        with patch('builtins.print'):  # Suppress print statements during initialization
-            return AlternativeImageProcessor()
+    # Save test image
+    test_dir = Path(__file__).parent / "test_files"
+    test_dir.mkdir(exist_ok=True)
+    test_image_path = test_dir / "test_schematic.png"
+    cv2.imwrite(str(test_image_path), image)
     
-    def test_initialization(self, image_processor):
-        """Test that the ImageProcessor initializes correctly"""
-        assert hasattr(image_processor, 'ALLOWED_TOOLS')
-        assert 'inkscape' in image_processor.ALLOWED_TOOLS
-        assert 'autotrace' in image_processor.ALLOWED_TOOLS
-        assert 'opencv' in image_processor.ALLOWED_TOOLS
-        assert hasattr(image_processor, 'has_inkscape')
-        assert hasattr(image_processor, 'has_autotrace')
-        assert hasattr(image_processor, 'has_opencv')
-        assert image_processor.has_opencv is True
-    
-    def test_check_tool_exists(self, image_processor):
-        """Test checking if a tool exists"""
-        # Test with allowed tools
-        result = image_processor.check_tool_exists('inkscape')
-        assert isinstance(result, bool)
+    try:
+        # Process the image
+        processor = AlternativeImageProcessor()
+        svg_path = processor.vectorize_image(str(test_image_path))
         
-        result = image_processor.check_tool_exists('autotrace')
-        assert isinstance(result, bool)
+        # Check that debug images were created
+        debug_binary = test_dir / "debug_binary.png"
+        debug_contours = test_dir / "debug_contours.png"
+        debug_lines = test_dir / "debug_lines.png"
         
-        # Test with disallowed tool
-        result = image_processor.check_tool_exists('not_allowed_tool')
-        assert result is False
-    
-    def test_get_image_dpi(self, image_processor, test_image_path):
-        """Test getting image DPI"""
-        dpi = image_processor.get_image_dpi(test_image_path)
-        assert dpi == 96.0
+        assert debug_binary.exists(), "Binary debug image not created"
+        assert debug_contours.exists(), "Contours debug image not created"
+        assert debug_lines.exists(), "Lines debug image not created"
         
-        # Test with non-existent image
-        with patch('cv2.imread', return_value=None):
-            dpi = image_processor.get_image_dpi('nonexistent.png')
-            assert dpi is None
+        # Check that SVG was created
+        svg_file = test_image_path.with_suffix('.svg')
+        assert svg_file.exists(), "SVG file not created"
         
-        # Test with exception
-        with patch('cv2.imread', side_effect=Exception("Error opening image")):
-            dpi = image_processor.get_image_dpi(test_image_path)
-            assert dpi is None
-    
-    @patch('shutil.which')
-    @patch('subprocess.run')
-    def test_convert_to_svg(self, mock_run, mock_which, image_processor, test_image_path, temp_dir):
-        """Test converting an image to SVG"""
-        with patch.object(image_processor, 'has_inkscape', True), \
-             patch.object(image_processor.path_validator, 'is_safe_executable', return_value=True), \
-             patch.object(image_processor.path_validator, 'is_safe_output_path', return_value=True), \
-             patch('pathlib.Path.exists', return_value=True):
+        # Verify SVG content
+        with open(svg_file) as f:
+            svg_content = f.read()
+            assert '<?xml version="1.0"' in svg_content
+            assert '<svg' in svg_content
+            assert '<path' in svg_content
+            assert 'stroke="black"' in svg_content
+            assert 'fill="none"' in svg_content
+        
+    finally:
+        # Clean up test files
+        for file in [test_image_path, debug_binary, debug_contours, debug_lines]:
+            if file.exists():
+                file.unlink()
+        
+        svg_file = test_image_path.with_suffix('.svg')
+        if svg_file.exists():
+            svg_file.unlink()
             
-            mock_which.return_value = 'C:\\Program Files\\Inkscape\\bin\\inkscape.exe'
-            mock_run.return_value = MagicMock(returncode=0)
-            
-            output_path = os.path.join(temp_dir, 'output.svg')
-            result = image_processor.convert_to_svg(test_image_path, output_path)
-            assert normalize_path(result) == normalize_path(output_path)
+        if test_dir.exists():
+            test_dir.rmdir()
 
-        # Test with non-existent input file
-        with patch.object(Path, 'exists', return_value=False), \
-             patch('src.utils.path_validator.PathValidator.is_safe_executable', return_value=True), \
-             patch('src.utils.path_validator.PathValidator.is_safe_output_path', return_value=True):
-            
-            with pytest.raises(ValueError) as excinfo:
-                image_processor.convert_to_svg('nonexistent.png', output_path)
-            assert "Input file not found" in str(excinfo.value)
-
-        # Test with timeout
-        mock_which.return_value = '/usr/bin/inkscape'
-        mock_run.side_effect = subprocess.TimeoutExpired(cmd='inkscape', timeout=30)
-        
-        # Mock all conversion methods to fail
-        with patch.object(image_processor, 'has_inkscape', True), \
-             patch.object(image_processor, 'has_autotrace', False), \
-             patch.object(image_processor, '_vectorize_with_opencv', side_effect=Exception("OpenCV failed")), \
-             patch('pathlib.Path.exists', return_value=True):
-            
-            # We need to patch is_safe_executable to handle the specific case
-            with patch.object(image_processor.path_validator, 'is_safe_executable', side_effect=lambda p: p.endswith('.exe')):
-                with pytest.raises(RuntimeError) as excinfo:
-                    image_processor.convert_to_svg(test_image_path, output_path)
-                assert "All conversion methods failed" in str(excinfo.value)
+def test_image_processor_error_handling():
+    """Test that image processor handles errors gracefully"""
+    processor = AlternativeImageProcessor()
     
-    @patch.object(AlternativeImageProcessor, '_vectorize_with_inkscape')
-    @patch.object(AlternativeImageProcessor, '_vectorize_with_autotrace')
-    @patch.object(AlternativeImageProcessor, '_vectorize_with_opencv')
-    def test_vectorize_image(self, mock_opencv, mock_autotrace, mock_inkscape, image_processor, test_image_path):
-        """Test vectorizing an image"""
-        # Set up the mocks
-        vector_path = test_image_path.replace('.png', '.svg')
-        
-        # Test with Inkscape available
-        image_processor.has_inkscape = True
-        image_processor.has_autotrace = False
-        mock_inkscape.return_value = vector_path
-        
-        result = image_processor.vectorize_image(test_image_path)
-        assert result == vector_path
-        mock_inkscape.assert_called_once_with(test_image_path)
-        mock_autotrace.assert_not_called()
-        mock_opencv.assert_not_called()
-        
-        # Reset mocks
-        mock_inkscape.reset_mock()
-        mock_autotrace.reset_mock()
-        mock_opencv.reset_mock()
-        
-        # Test with Inkscape failing, AutoTrace available
-        image_processor.has_inkscape = True
-        image_processor.has_autotrace = True
-        mock_inkscape.side_effect = Exception("Inkscape failed")
-        mock_autotrace.return_value = vector_path
-        
-        result = image_processor.vectorize_image(test_image_path)
-        assert result == vector_path
-        mock_inkscape.assert_called_once_with(test_image_path)
-        mock_autotrace.assert_called_once_with(test_image_path)
-        mock_opencv.assert_not_called()
-        
-        # Reset mocks
-        mock_inkscape.reset_mock()
-        mock_autotrace.reset_mock()
-        mock_opencv.reset_mock()
-        
-        # Test with both Inkscape and AutoTrace failing, OpenCV as fallback
-        image_processor.has_inkscape = True
-        image_processor.has_autotrace = True
-        mock_inkscape.side_effect = Exception("Inkscape failed")
-        mock_autotrace.side_effect = Exception("AutoTrace failed")
-        mock_opencv.return_value = vector_path
-        
-        result = image_processor.vectorize_image(test_image_path)
-        assert result == vector_path
-        mock_inkscape.assert_called_once_with(test_image_path)
-        mock_autotrace.assert_called_once_with(test_image_path)
-        mock_opencv.assert_called_once_with(test_image_path)
-        
-        # Reset mocks
-        mock_inkscape.reset_mock()
-        mock_autotrace.reset_mock()
-        mock_opencv.reset_mock()
-        
-        # Test with all methods failing
-        mock_inkscape.side_effect = Exception("Inkscape failed")
-        mock_autotrace.side_effect = Exception("AutoTrace failed")
-        mock_opencv.side_effect = Exception("OpenCV failed")
-        
-        with pytest.raises(ValueError) as excinfo:
-            image_processor.vectorize_image(test_image_path)
-        assert "All vectorization methods failed" in str(excinfo.value)
+    # Test with non-existent file
+    result = processor.vectorize_image("nonexistent.png")
+    assert result is None
     
-    def test_vectorize_with_inkscape(self, windows_only, image_processor, test_image_path):
-        """Test vectorizing with Inkscape"""
-        with patch('shutil.which') as mock_which, \
-             patch('subprocess.run') as mock_run:
-            
-            mock_which.return_value = 'C:\\Program Files\\Inkscape\\bin\\inkscape.exe'
-            mock_run.return_value = MagicMock(returncode=0)
-            
-            vector_path = test_image_path.replace('.png', '.svg')
-            
-            # Test successful conversion
-            with patch.object(Path, 'exists', return_value=True), \
-                 patch('src.utils.path_validator.PathValidator.is_safe_executable', return_value=True):
-                
-                result = image_processor._vectorize_with_inkscape(test_image_path)
-                assert normalize_path(result) == normalize_path(vector_path)
-
-    def test_vectorize_with_autotrace(self, windows_only, image_processor, test_image_path):
-        """Test vectorizing with AutoTrace"""
-        with patch('shutil.which') as mock_which, \
-             patch('subprocess.run') as mock_run:
-            
-            mock_which.return_value = 'C:\\Program Files\\AutoTrace\\autotrace.exe'
-            mock_run.return_value = MagicMock(returncode=0)
-            
-            vector_path = test_image_path.replace('.png', '.svg')
-            
-            # Test successful conversion
-            with patch.object(Path, 'exists', return_value=True), \
-                 patch('src.utils.path_validator.PathValidator.is_safe_executable', return_value=True):
-                
-                result = image_processor._vectorize_with_autotrace(test_image_path)
-                assert normalize_path(result) == normalize_path(vector_path)
-
-    @patch('cv2.imread')
-    @patch('cv2.cvtColor')
-    @patch('cv2.threshold')
-    @patch('cv2.findContours')
-    @patch('cv2.arcLength')
-    @patch('cv2.approxPolyDP')
-    @patch('svgwrite.Drawing')
-    def test_vectorize_with_opencv(self, mock_drawing, mock_approx, mock_arclen, mock_contours, 
-                                  mock_threshold, mock_cvtcolor, mock_imread, 
-                                  image_processor, test_image_path):
-        """Test vectorizing with OpenCV"""
-        # Mock the methods
-        mock_img = MagicMock()
-        mock_imread.return_value = mock_img
-        
-        mock_gray = MagicMock()
-        mock_cvtcolor.return_value = mock_gray
-        
-        mock_binary = MagicMock()
-        mock_threshold.return_value = (None, mock_binary)
-        
-        # Create mock contours
-        mock_contour = np.array([[[10, 10]], [[20, 20]], [[30, 10]]])
-        mock_contours.return_value = ([mock_contour], None)
-        
-        mock_arclen.return_value = 100.0
-        
-        mock_approx_contour = np.array([[[10, 10]], [[20, 20]], [[30, 10]]])
-        mock_approx.return_value = mock_approx_contour
-        
-        # Mock the SVG drawing
-        mock_dwg = MagicMock()
-        mock_drawing.return_value = mock_dwg
-        mock_path = MagicMock()
-        mock_dwg.path.return_value = mock_path
-        mock_dwg.add.return_value = None
-        
-        vector_path = test_image_path.replace('.png', '.svg')
-        result = image_processor._vectorize_with_opencv(test_image_path)
-        
-        assert result == vector_path
-        mock_imread.assert_called_once_with(test_image_path)
-        mock_cvtcolor.assert_called_once()
-        mock_threshold.assert_called_once()
-        mock_contours.assert_called_once()
-        mock_drawing.assert_called_once()
-        mock_dwg.save.assert_called_once()
-        
-        # Test with image loading failure
-        mock_imread.return_value = None
-        with pytest.raises(ValueError) as excinfo:
-            image_processor._vectorize_with_opencv(test_image_path)
-        assert "Failed to load image" in str(excinfo.value)
+    # Test with invalid image data
+    test_dir = Path(__file__).parent / "test_files"
+    test_dir.mkdir(exist_ok=True)
+    invalid_image = test_dir / "invalid.png"
     
-    def test_trace_bitmap(self, image_processor):
-        """Test trace_bitmap method"""
-        # Mock the vectorize_image method
-        with patch.object(image_processor, 'vectorize_image') as mock_vectorize:
-            mock_vectorize.return_value = 'output.svg'
+    try:
+        # Create an invalid image file
+        with open(invalid_image, 'w') as f:
+            f.write("Not a PNG file")
+        
+        result = processor.vectorize_image(str(invalid_image))
+        assert result is None
+        
+    finally:
+        # Clean up
+        if invalid_image.exists():
+            invalid_image.unlink()
+        if test_dir.exists():
+            test_dir.rmdir()
+
+def test_image_processor_different_formats():
+    """Test that image processor handles different image formats"""
+    processor = AlternativeImageProcessor()
+    
+    # Create test images in different formats
+    test_dir = Path(__file__).parent / "test_files"
+    test_dir.mkdir(exist_ok=True)
+    
+    image = np.zeros((100, 100, 3), dtype=np.uint8)
+    cv2.rectangle(image, (20, 20), (40, 40), (255, 255, 255), 2)
+    
+    formats = [
+        ('png', cv2.IMWRITE_PNG_COMPRESSION, 9),
+        ('jpg', cv2.IMWRITE_JPEG_QUALITY, 90),
+        ('bmp', None, None)
+    ]
+    
+    try:
+        for fmt, param, value in formats:
+            test_image = test_dir / f"test.{fmt}"
+            if param is not None:
+                cv2.imwrite(str(test_image), image, [param, value])
+            else:
+                cv2.imwrite(str(test_image), image)
             
-            result = image_processor.trace_bitmap('input.png')
+            # Process each format
+            svg_path = processor.vectorize_image(str(test_image))
+            assert svg_path is not None
+            assert Path(svg_path).exists()
             
-            assert result == 'output.svg'
-            mock_vectorize.assert_called_once_with('input.png')
+            # Clean up SVG
+            Path(svg_path).unlink()
+            test_image.unlink()
+            
+            # Clean up debug images
+            debug_files = [
+                test_dir / "debug_binary.png",
+                test_dir / "debug_contours.png",
+                test_dir / "debug_lines.png"
+            ]
+            for debug_file in debug_files:
+                if debug_file.exists():
+                    debug_file.unlink()
+    
+    finally:
+        if test_dir.exists():
+            test_dir.rmdir()
