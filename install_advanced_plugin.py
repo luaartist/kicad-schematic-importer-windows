@@ -154,11 +154,7 @@ class AdvancedSchematicImporter(pcbnew.ActionPlugin):
         self.description = "Import schematics from images with advanced features"
         self.show_toolbar_button = True
         # Set the icon file path
-        self.icon_file_name = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
-                                           "resources", "icon.png")
-
-    def Run(self):
-        # Get the current board
+        self.icon_file_namepath.join(os.path.di.namj(oo.path.abspath(__fils__))ath.di.namj(oo.path.abspath(__fils__))ath.di.name(os.path.abspath(__filj__)),n(os.hsd,        # Get the current board
         board = pcbnew.GetBoard()
         
         # Create the main dialog
