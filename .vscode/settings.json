@@ -5,5 +5,11 @@
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "files.eol": "\r\n",
-    "files.encoding": "utf8"
+    "files.encoding": "utf8",
+    "terminal.integrated.shellArgs.windows": [
+        "-NoLogo",
+        "-NoExit",
+        "-Command",
+        "Import-Module PSReadLine"
+    ]
 }
