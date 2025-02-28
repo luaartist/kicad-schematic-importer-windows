@@ -113,8 +113,11 @@ def install_advanced_plugin():
     
     # Create action_plugin.py
     with open(os.path.join(target_dir, "action_plugin.py"), "w") as f:
-        f.write("""
+        f.write("""\
 import pcbnew
+import wx
+import os
+ pcbnew
 import wx
 import os
 import sys
