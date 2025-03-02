@@ -1,0 +1,28 @@
+kicad_schematic_importer/
+├── __init__.py
+├── metadata.json
+├── plugin.py
+├── icon.png
+├── processors/
+│   ├── __init__.py
+│   ├── image_processor.py
+│   ├── alternative_processor.py
+│   └── kicad_processor.py
+├── utils/
+│   ├── __init__.py
+│   ├── debug_manager.py
+│   └── external_tools.py
+├── core/
+│   ├── __init__.py
+│   ├── schematic_importer.py
+│   └── component_detector.py
+├── integration/
+│   ├── __init__.py
+│   └── kicad_integration.py
+├── resources/
+│   ├── templates/
+│   └── config/
+└── tests/
+    ├── __init__.py
+    ├── test_image_processor.py
+    └── test_data/

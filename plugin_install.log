@@ -1,0 +1,28 @@
+2025-02-28 16:37:04,639 - INFO - Starting Advanced Schematic Importer plugin installation...
+2025-02-28 16:37:04,701 - WARNING - Could not find KiCad's Python. Will use system Python instead.
+2025-02-28 16:37:08,111 - INFO - Using KiCad version: 7.0
+2025-02-28 16:37:08,112 - INFO - Found KiCad plugin directory: C:\Users\walla\Documents\KiCad\7.0\3rdparty\plugins
+2025-02-28 16:37:08,112 - INFO - Installing plugin to: C:\Users\walla\Documents\KiCad\7.0\3rdparty\plugins
+2025-02-28 16:37:08,113 - INFO - Plugin installed successfully!
+2025-02-28 16:37:08,113 - INFO - 
+To use the plugin:
+2025-02-28 16:37:08,116 - INFO - 1. Start KiCad
+2025-02-28 16:37:08,116 - INFO - 2. Open PCB Editor
+2025-02-28 16:37:08,117 - INFO - 3. Look for 'Advanced Schematic Importer' in the Tools menu
+2025-02-28 16:37:08,117 - INFO - 
+If KiCad is already running, please restart it to load the plugin.
+2025-02-28 16:37:08,117 - INFO - Installation completed successfully!
+2025-02-28 16:37:35,048 - INFO - Starting Advanced Schematic Importer plugin installation...
+2025-02-28 16:37:35,112 - WARNING - Could not find KiCad's Python. Will use system Python instead.
+2025-02-28 16:37:38,894 - INFO - Using KiCad version: 7.0
+2025-02-28 16:37:38,895 - INFO - Found KiCad plugin directory: C:\Users\walla\Documents\KiCad\7.0\3rdparty\plugins
+2025-02-28 16:37:38,895 - INFO - Installing plugin to: C:\Users\walla\Documents\KiCad\7.0\3rdparty\plugins
+2025-02-28 16:37:38,896 - INFO - Plugin installed successfully!
+2025-02-28 16:37:38,897 - INFO - 
+To use the plugin:
+2025-02-28 16:37:38,897 - INFO - 1. Start KiCad
+2025-02-28 16:37:38,897 - INFO - 2. Open PCB Editor
+2025-02-28 16:37:38,897 - INFO - 3. Look for 'Advanced Schematic Importer' in the Tools menu
+2025-02-28 16:37:38,897 - INFO - 
+If KiCad is already running, please restart it to load the plugin.
+2025-02-28 16:37:38,898 - INFO - Installation completed successfully!

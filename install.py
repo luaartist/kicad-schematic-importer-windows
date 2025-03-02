@@ -6,14 +6,158 @@ import platform
 import argparse
 import subprocess
 import stat
+from pathlib import Path
 
-def find_kicad_plugin_dir(kicad_version="7.0"):
+def check_build_dependencies():
+    """Check if required build tools are installed and provide installation instructions"""
+    dependencies = {
+        'cmake': 'cmake --version',
+        'git': 'git --version',
+        'python': 'python --version',
+        'msbuild': 'msbuild -version' if platform.system() == "Windows" else None
+    }
+    
+    missing = []
+    for tool, command in dependencies.items():
+        if command:
+            try:
+                subprocess.run(command.split(), capture_output=True, check=True)
+            except (subprocess.SubprocessError, FileNotFoundError):
+                missing.append(tool)
+    
+    if missing:
+        print("\nMissing required build tools. Please install the following:")
+        
+        if 'cmake' in missing:
+            print("\nCMake:")
+            print("1. Download from https://cmake.org/download/")
+            print("2. During installation, select 'Add CMake to system PATH'")
+        
+        if 'msbuild' in missing:
+            print("\nMSBuild (Visual Studio Build Tools):")
+            print("1. Download Visual Studio Build Tools from:")
+            print("   https://visualstudio.microsoft.com/visual-cpp-build-tools/")
+            print("2. In the installer, select:")
+            print("   - Desktop development with C++")
+            print("   - C++ CMake tools for Windows")
+            print("3. After installation, run this from Developer Command Prompt:")
+            print("   setx PATH \"%PATH%;C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\MSBuild\\Current\\Bin\"")
+        
+        if 'git' in missing:
+            print("\nGit:")
+            print("1. Download from https://git-scm.com/download/win")
+            print("2. During installation, select 'Git from the command line'")
+        
+        print("\nAfter installing, you may need to:")
+        print("1. Close and reopen your terminal")
+        print("2. Run this script again")
+        
+    return missing
+
+def setup_build_environment():
+    """Setup and verify build environment"""
+    print("Checking build environment...")
+    
+    # Check Visual Studio installation
+    vs_path = os.environ.get('VS2022INSTALLDIR') or os.environ.get('VS2019INSTALLDIR')
+    if not vs_path:
+        print("\nVisual Studio not found. Please install Visual Studio 2022 or 2019:")
+        print("1. Download Visual Studio Community or Build Tools:")
+        print("   https://visualstudio.microsoft.com/downloads/")
+        print("2. In the installer, select:")
+        print("   - Desktop development with C++")
+        print("   - C++ CMake tools for Windows")
+        return False
+    
+    # Check Python development files
+    try:
+        import distutils.sysconfig
+        python_include = distutils.sysconfig.get_python_inc()
+        if not os.path.exists(os.path.join(python_include, "Python.h")):
+            print("\nPython development files not found. Please install:")
+            print("pip install python-dev-tools")
+            return False
+    except ImportError:
+        print("\nCould not verify Python development files.")
+        return False
+    
+    # Check environment variables
+    required_vars = ['PATH', 'TEMP', 'SystemRoot']
+    missing_vars = [var for var in required_vars if not os.environ.get(var)]
+    if missing_vars:
+        print(f"\nMissing required environment variables: {', '.join(missing_vars)}")
+        return False
+    
+    return True
+
+def build_kicad_from_source(python_version, build_dir=None, branch="master"):
+    """Build KiCad from source with specified Python version"""
+    if platform.system() != "Windows":
+        raise RuntimeError("Custom builds currently only supported on Windows")
+    
+    # Verify build environment
+    if not setup_build_environment():
+        raise RuntimeError("Build environment setup failed")
+    
+    # Check build dependencies
+    missing_deps = check_build_dependencies()
+    if missing_deps:
+        raise RuntimeError("Please install required build tools before continuing")
+    
+    build_dir = build_dir or os.path.join(os.path.expanduser("~"), "kicad-build")
+    source_dir = os.path.join(build_dir, "kicad-source")
+    install_dir = os.path.join(build_dir, "kicad-install")
+    
+    print(f"\nBuild configuration:")
+    print(f"Build directory: {build_dir}")
+    print(f"Source directory: {source_dir}")
+    print(f"Install directory: {install_dir}")
+    print(f"Python version: {python_version}")
+    print(f"Branch: {branch}")
+    
+    # Clone KiCad repository
+    if not os.path.exists(source_dir):
+        subprocess.run([
+            "git", "clone", 
+            "--depth", "1", 
+            "--branch", branch,
+            "https://gitlab.com/kicad/code/kicad.git",
+            source_dir
+        ], check=True)
+    
+    # Configure CMake
+    cmake_args = [
+        "cmake",
+        "-G", "Visual Studio 17 2022",
+        "-A", "x64",
+        "-DKICAD_SCRIPTING=ON",
+        "-DKICAD_SCRIPTING_PYTHON3=ON",
+        f"-DPYTHON_EXECUTABLE={sys.executable}",
+        "-DKICAD_BUILD_QA_TESTS=OFF",
+        f"-DCMAKE_INSTALL_PREFIX={install_dir}",
+        source_dir
+    ]
+    
+    os.makedirs(os.path.join(build_dir, "build"), exist_ok=True)
+    subprocess.run(cmake_args, cwd=os.path.join(build_dir, "build"), check=True)
+    
+    # Build KiCad
+    subprocess.run([
+        "cmake", "--build", ".", 
+        "--config", "Release",
+        "--target", "install"
+    ], cwd=os.path.join(build_dir, "build"), check=True)
+    
+    return install_dir
+
+def find_kicad_plugin_dir(kicad_version="7.0", custom_build_dir=None):
     """Find KiCad plugin directory for Windows"""
-    if kicad_version == "9.0":
-        # KiCad 9.0 uses a different location
+    if custom_build_dir:
+        # For custom builds, use the build directory
+        return os.path.join(custom_build_dir, "share", "kicad", "scripting", "plugins")
+    elif kicad_version == "9.0":
         return os.path.join(os.path.expanduser("~"), "Documents", "KiCad", "9.0", "3rdparty", "plugins")
     else:
-        # Windows: %APPDATA%\kicad\7.0\scripting\plugins
         return os.path.join(os.getenv("APPDATA"), "kicad", kicad_version, "scripting", "plugins")
 
 def install_plugin(plugin_dir=None, kicad_plugin_dir=None, kicad_version="7.0", create_shortcut=False):
@@ -133,8 +277,23 @@ def main():
     parser.add_argument('--kicad-version', type=str, default="7.0", help='KiCad version (default: 7.0)')
     parser.add_argument('--shortcut', action='store_true', help='Create desktop shortcut')
     parser.add_argument('--create-exe', action='store_true', help='Create executable installer')
+    parser.add_argument('--build-kicad', action='store_true', help='Build KiCad from source')
+    parser.add_argument('--python-version', type=str, help='Python version for custom build')
+    parser.add_argument('--build-dir', type=str, help='Directory for custom build')
     
     args = parser.parse_args()
+    
+    if args.build_kicad:
+        try:
+            install_dir = build_kicad_from_source(
+                args.python_version,
+                args.build_dir
+            )
+            args.kicad_dir = find_kicad_plugin_dir(custom_build_dir=install_dir)
+            print(f"Custom KiCad build completed. Installing plugin...")
+        except Exception as e:
+            print(f"Error building KiCad: {e}")
+            sys.exit(1)
     
     if args.create_exe:
         create_executable()
